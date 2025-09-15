@@ -1,0 +1,25 @@
+Package: TWoLife
+Type: Package
+Title: Individual-Based Ecological Simulations with Spatial Population Dynamics
+Version: 1.0.0
+Authors@R: c(person("Your", "Name", email = "your.email@example.com", role = c("aut", "cre")))
+Description: Implements individual-based ecological simulations featuring spatial 
+    population dynamics, demographic processes, and fractal landscape generation.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    R (>= 3.5.0)
+Imports: 
+    Rcpp (>= 1.0.0)
+LinkingTo: 
+    Rcpp
+Suggests: 
+    rflsgen,
+    viridisLite,
+    knitr,
+    rmarkdown
+SystemRequirements: C++11
+RoxygenNote: 7.3.3
+VignetteBuilder: knitr
+

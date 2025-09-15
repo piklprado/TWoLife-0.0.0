@@ -1,0 +1,57 @@
+#' TWoLife: Individual-Based Spatial Population Simulations
+#'
+#' @description 
+#' TWoLife provides tools for running individual-based spatial population simulations
+#' with genetic evolution, habitat selection, and demographic processes. The package
+#' implements spatially-explicit models where individuals move, reproduce, and die
+#' across heterogeneous landscapes.
+#'
+#' @details
+#' The main function \code{\link{twolife_simulation}} runs complete simulations.
+#' Key features include:
+#' \itemize{
+#'   \item Spatial population dynamics in continuous or discrete landscapes
+#'   \item Genetic evolution with mutation and selection
+#'   \item Habitat selection behavior
+#'   \item Density-dependent demography
+#'   \item Multiple boundary conditions and landscape types
+#'   \item Fast C++ simulation engine via Rcpp
+#' }
+#'
+#' @section Main Functions:
+#' \itemize{
+#'   \item \code{\link{twolife_simulation}}: Run complete individual-based simulation
+#'   \item \code{\link{create_fractal_landscape}}: Generate realistic test landscapes
+#'   \item \code{\link{create_corner_landscape}}: Generate simple test landscapes
+#'   \item \code{\link{plot_simulation_on_landscape}}: Visualize simulation results
+#'   \item \code{\link{plot_landscape_world_coords}}: Plot landscape habitat quality
+#'   \item \code{\link{compute_population_size}}: Extract population trajectories
+#' }
+#'
+#' @section Typical Workflow:
+#' \enumerate{
+#'   \item Create or load a landscape matrix
+#'   \item Set simulation parameters
+#'   \item Run simulation with \code{twolife_simulation()}
+#'   \item Analyze results and visualize outcomes
+#' }
+#'
+#' @section Getting Started:
+#' See \code{vignette("introduction", package = "TWoLife")} for detailed examples
+#' and tutorials.
+#'
+#' @section Parameter Categories:
+#' \describe{
+#'   \item{Landscape Parameters}{Habitat matrix, cell size, boundary conditions}
+#'   \item{Individual Parameters}{Population size, movement, demography}
+#'   \item{Genetic Parameters}{Evolution, mutation, plasticity, habitat selection}
+#'   \item{Simulation Parameters}{Duration, output options}
+#' }
+#'
+#' @author TWoLife Development Team
+#'
+#' @keywords internal
+#' @aliases TWoLife-package
+#' @useDynLib TWoLife, .registration = TRUE
+#' @importFrom Rcpp sourceCpp
+"_PACKAGE"

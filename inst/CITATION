@@ -1,0 +1,9 @@
+citHeader("Para citar TWoLife em publicações use:")
+
+citEntry(entry = "Manual",
+         title = "TWoLife: Spatial Eco‑Evolutionary Simulation",
+         author = personList(as.person("Lucas De Freitas")),
+         year = "2025",
+         note = "R package version 0.0.1",
+         textVersion = "De Freitas, L. (0.0.1). TWoLife: Spatial Eco‑Evolutionary Simulation. R package."
+)

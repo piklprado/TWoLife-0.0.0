@@ -1,0 +1,598 @@
+---
+title: "Introduction to TWoLife: Individual-Based Population Simulations"
+author: "TWoLife Development Team"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+    fig_width: 7
+    fig_height: 5
+vignette: >
+  %\VignetteIndexEntry{Introduction to TWoLife: Individual-Based Population Simulations}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "figures/",
+  cache = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+
+# Load the TWoLife package
+library(TWoLife)
+
+```
+
+## Overview
+
+TWoLife is an R package for individual-based spatial population simulations. This vignette demonstrates the core functionality through a series of progressively complex examples, showing how landscape structure, genetics, and behavior interact to determine population outcomes.
+
+**What you'll learn:**
+- Basic TWoLife workflow for spatial population simulations
+- How habitat loss and fragmentation affect population dynamics
+- The role of genetic diversity and evolution in population persistence
+- Effects of individual behavior (habitat selection) on spatial patterns
+- How to visualize and analyze simulation results
+
+**Expected runtime:** 3-5 minutes
+
+## Setup and Basic Concepts
+
+```{r library}
+library(TWoLife)
+
+# Single master seed for full reproducibility
+MASTER_SEED <- 42
+set.seed(MASTER_SEED)
+```
+
+TWoLife simulates populations of individuals that move, reproduce, and die in spatial landscapes. Each individual has genetic traits that determine its optimal habitat conditions and demographic rates.
+
+## Part 1: Basic Landscape Effects
+
+### Creating Test Landscapes
+
+We start by creating three types of landscapes to test fundamental spatial effects:
+
+```{r landscapes}
+# Perfect habitat (all cells = 1)
+perfect_habitat <- create_fractal_landscape(
+  cells_per_side = 10,
+  fractality = 0.5,
+  habitat_proportion = 1.0  # All habitat
+)
+
+# Reduced habitat (40% habitat)  
+reduced_habitat <- create_fractal_landscape(
+  cells_per_side = 10,
+  fractality = 0.5,
+  habitat_proportion = 0.4
+)
+
+# Fragmented habitat (40% habitat, more fragmented)
+fragmented_habitat <- create_fractal_landscape(
+  cells_per_side = 10,
+  fractality = 0.8,  # Higher fractality = more fragmentation
+  habitat_proportion = 0.4
+)
+
+cat("Perfect habitat dimensions:", nrow(perfect_habitat), "x", ncol(perfect_habitat), "\n")
+cat("Habitat proportion in reduced:", round(mean(reduced_habitat), 2), "\n")
+cat("Habitat proportion in fragmented:", round(mean(fragmented_habitat), 2), "\n")
+```
+
+### Running Basic Simulations
+
+Now we test how these different landscape configurations affect population dynamics:
+
+```{r basic_simulations, cache=TRUE}
+# Simulation A: Perfect habitat
+result_perfect <- twolife_simulation(
+  landscape_params = list(habitat = perfect_habitat),
+  individual_params = list(
+    initial_population_size = 100,
+    random_seed = MASTER_SEED
+  ),
+  simulation_params = list(max_events = 300)
+)
+
+# Simulation B: Reduced habitat
+result_reduced <- twolife_simulation(
+  landscape_params = list(habitat = reduced_habitat),
+  individual_params = list(
+    initial_population_size = 100,
+    random_seed = MASTER_SEED
+  ),
+  simulation_params = list(max_events = 300)
+)
+
+# Simulation C: Fragmented habitat
+result_fragmented <- twolife_simulation(
+  landscape_params = list(habitat = fragmented_habitat),
+  individual_params = list(
+    initial_population_size = 100,
+    random_seed = MASTER_SEED
+  ),
+  simulation_params = list(max_events = 300)
+)
+```
+
+### Analyzing Basic Results
+
+```{r basic_results}
+# Compare final population sizes
+final_pops <- c(
+  Perfect = result_perfect$summary$final_population_size,
+  Reduced = result_reduced$summary$final_population_size,
+  Fragmented = result_fragmented$summary$final_population_size
+)
+
+print(final_pops)
+
+# Interpret results
+if (final_pops["Perfect"] > final_pops["Reduced"]) {
+  cat("Habitat loss reduces population size (Perfect > Reduced)\n")
+} 
+if (final_pops["Reduced"] > final_pops["Fragmented"]) {
+  cat("Fragmentation worse than simple habitat loss (Reduced > Fragmented)\n")
+} else if (final_pops["Fragmented"] > final_pops["Reduced"]) {
+  cat("! Fragmentation better than expected - landscape-specific effect\n")
+}
+```
+
+### Population Trajectories
+
+We can examine how populations change over time using the `compute_population_size()` function:
+
+```{r trajectories}
+traj_perfect <- compute_population_size(result_perfect)
+traj_reduced <- compute_population_size(result_reduced)
+traj_fragmented <- compute_population_size(result_fragmented)
+
+cat("Perfect habitat - Events:", nrow(traj_perfect), "\n")
+cat("Reduced habitat - Events:", nrow(traj_reduced), "\n")
+cat("Fragmented habitat - Events:", nrow(traj_fragmented), "\n")
+```
+
+### Visualizing Basic Results
+
+```{r basic_plots, fig.height=8, fig.width=10}
+# Plot landscapes and simulation results
+par(mfrow = c(2, 3))
+
+# Landscapes
+plot_landscape_world_coords(perfect_habitat, main = "Perfect Habitat", colors = "habitat")
+plot_landscape_world_coords(reduced_habitat, main = "Reduced Habitat", colors = "habitat")
+plot_landscape_world_coords(fragmented_habitat, main = "Fragmented Habitat", colors = "habitat")
+
+# Survivors on landscapes
+plot_simulation_on_landscape(result_perfect, 
+                             main = "Survivors: Perfect Habitat",
+                             point_color = "red", point_size = 1.5)
+
+plot_simulation_on_landscape(result_reduced, 
+                             main = "Survivors: Reduced Habitat",
+                             point_color = "red", point_size = 1.5)
+
+plot_simulation_on_landscape(result_fragmented, 
+                             main = "Survivors: Fragmented Habitat",
+                             point_color = "red", point_size = 1.5)
+
+par(mfrow = c(1, 1))
+```
+
+```{r trajectory_plots, fig.height=5, fig.width=8}
+# Population trajectories
+plot(traj_perfect$time, traj_perfect$population_size, 
+     type = "l", col = "green", lwd = 2,
+     main = "Population Trajectories", 
+     xlab = "Time", ylab = "Population Size",
+     ylim = c(0, max(c(traj_perfect$population_size, 
+                       traj_reduced$population_size, 
+                       traj_fragmented$population_size))))
+
+lines(traj_reduced$time, traj_reduced$population_size, col = "orange", lwd = 2)
+lines(traj_fragmented$time, traj_fragmented$population_size, col = "red", lwd = 2)
+
+legend("topright", 
+       legend = c("Perfect", "Reduced", "Fragmented"),
+       col = c("green", "orange", "red"), 
+       lwd = 2)
+```
+
+```{r comparison_barplot, fig.height=4, fig.width=6}
+# Final comparison barplot
+barplot(final_pops, 
+        main = "Final Population Size Comparison",
+        ylab = "Survivors",
+        col = c("green", "orange", "red"))
+```
+
+## Part 2: Advanced Genetic Features
+
+### Continuous Landscapes and Fractality
+
+Real landscapes often have continuous variation in habitat quality rather than simple binary (good/bad) classifications. TWoLife can work with continuous landscapes where different individuals may prefer different optimal conditions.
+
+```{r continuous_landscapes}
+# Create continuous landscapes with different fractality levels
+continuous_smooth <- create_fractal_landscape(
+  cells_per_side = 15,
+  fractality = 0.9,  # High fractality = smooth/correlated
+  habitat_proportion = NULL,  # Continuous values
+  min_value = 0.0,
+  max_value = 1.0
+)
+
+continuous_medium <- create_fractal_landscape(
+  cells_per_side = 15,
+  fractality = 0.5,  # Medium fractality
+  habitat_proportion = NULL,
+  min_value = 0.0,
+  max_value = 1.0
+)
+
+continuous_rough <- create_fractal_landscape(
+  cells_per_side = 15,
+  fractality = 0.1,  # Low fractality = rough/fragmented
+  habitat_proportion = NULL,
+  min_value = 0.0,
+  max_value = 1.0
+)
+
+cat("Smooth landscape range:", round(min(continuous_smooth), 3), "to", round(max(continuous_smooth), 3), "\n")
+cat("Medium landscape range:", round(min(continuous_medium), 3), "to", round(max(continuous_medium), 3), "\n")
+cat("Rough landscape range:", round(min(continuous_rough), 3), "to", round(max(continuous_rough), 3), "\n")
+```
+
+```{r fractality_plots, fig.height=4, fig.width=12}
+# Visualize the different fractality levels
+par(mfrow = c(1, 3))
+plot_landscape_world_coords(continuous_smooth, main = "Smooth (fractality=0.9)", colors = "terrain")
+plot_landscape_world_coords(continuous_medium, main = "Medium (fractality=0.5)", colors = "terrain")
+plot_landscape_world_coords(continuous_rough, main = "Rough (fractality=0.1)", colors = "terrain")
+par(mfrow = c(1, 1))
+```
+
+**Fractality effects:** Higher fractality values create smoother, more spatially correlated patterns, while lower values create more fragmented, random-like patterns.
+
+### Progressive Genetics: What Makes Populations Survive?
+
+One of the most powerful features of TWoLife is its genetic system. But which genetic components are actually necessary for population persistence? We'll test this step-by-step using a continuous landscape.
+
+```{r genetics_setup}
+# Use medium continuous landscape for genetics exploration
+genetics_landscape <- continuous_medium
+
+# Landscape characteristics
+cat("Genetics landscape characteristics:\n")
+cat("- Value range:", round(min(genetics_landscape), 3), "to", round(max(genetics_landscape), 3), "\n")
+cat("- Mean value:", round(mean(genetics_landscape), 3), "\n")
+cat("- Standard deviation:", round(sd(as.vector(genetics_landscape)), 3), "\n")
+
+cat("\nParameter choices explained:\n")
+cat("- Population size 40: Small enough for fast execution, large enough for patterns\n")
+cat("- genotype_sds 0.15: Moderate niche width (~±0.3 habitat tolerance)\n")  
+cat("- mutation_rate 0.05: Moderate evolution rate\n")
+cat("- sampling_points 20: Active habitat selection without excessive computation\n")
+```
+
+#### Step 1: Default Genetics (Predicted: Extinction)
+
+By default, TWoLife creates individuals that are perfect specialists optimized for habitat value 1.0. On a continuous landscape with values ranging from 0 to 1, very few pixels will have exactly the value 1.0.
+
+```{r step1, cache=TRUE}
+cat("--- STEP 1: DEFAULT GENETICS ---\n")
+cat("Setup: All identical specialists optimized for habitat = 1.0\n")
+cat("Reality: On continuous landscape [0,1], very few/no pixels have exactly value 1.0\n")
+cat("Prediction: Rapid extinction due to habitat mismatch\n\n")
+
+result_no_genetics <- twolife_simulation(
+  landscape_params = list(habitat = genetics_landscape),
+  individual_params = list(
+    initial_population_size = 40,
+    random_seed = MASTER_SEED
+  ),
+  simulation_params = list(max_events = 250)
+)
+
+cat("RESULT - Survivors:", result_no_genetics$summary$final_population_size, "\n")
+if (result_no_genetics$summary$final_population_size == 0) {
+  cat("Population extinct as predicted - no individual flexibility\n")
+} else {
+  cat("! Unexpected survival - check landscape has pixels exactly = 1.0\n")
+}
+```
+
+#### Step 2: Variable Specialists (Predicted: Extinction)
+
+What if individuals have different optimal habitat values but are still perfect specialists?
+
+```{r step2, cache=TRUE}
+cat("\n--- STEP 2: VARIABLE SPECIALISTS ---\n")
+cat("Setup: Different optimal habitat values (0.3-0.7)\n")
+cat("Limitation: Still perfect specialists (genotype_sds = 0)\n")
+cat("Prediction: Still extinction - no individual flexibility\n\n")
+
+result_simple_genetics <- twolife_simulation(
+  landscape_params = list(habitat = genetics_landscape),
+  individual_params = list(
+    initial_population_size = 40,
+    random_seed = MASTER_SEED
+  ),
+  genetic_params = list(
+    genotype_means = runif(40, 0.3, 0.7)  # Random starting genotypes
+  ),
+  simulation_params = list(max_events = 250)
+)
+
+cat("RESULT - Survivors:", result_simple_genetics$summary$final_population_size, "\n")
+if (result_simple_genetics$summary$final_population_size == 0) {
+  cat("Population extinct as predicted - individuals still too specialized\n")
+} else {
+  cat("! Unexpected survival - some individuals found exact matches\n")
+  cat("  Survivor genotypes:", paste(round(result_simple_genetics$survivors$genotype, 3), collapse=", "), "\n")
+}
+```
+
+#### Step 3: Generalists (Predicted: Survival)
+
+The critical breakthrough comes when we give individuals **niche width** - the ability to tolerate a range of habitat qualities around their optimum.
+
+```{r step3, cache=TRUE}
+cat("\n--- STEP 3: GENERALISTS ---\n")
+cat("Setup: Individuals can tolerate habitat quality ranges\n")
+cat("Key change: genotype_sds = 0.15 gives ~±0.3 tolerance around optimal values\n")
+cat("Prediction: Population survival with spatial segregation\n\n")
+
+result_specialist_genetics <- twolife_simulation(
+  landscape_params = list(habitat = genetics_landscape),
+  individual_params = list(
+    initial_population_size = 40,
+    random_seed = MASTER_SEED
+  ),
+  genetic_params = list(
+    genotype_means = runif(40, 0.3, 0.7),
+    genotype_sds = rep(0.15, 40)  # Moderate specialists
+  ),
+  simulation_params = list(max_events = 250)
+)
+
+cat("RESULT - Survivors:", result_specialist_genetics$summary$final_population_size, "\n")
+if (result_specialist_genetics$summary$final_population_size > 0) {
+  cat("Population survived! Niche width enables habitat use flexibility\n")
+  cat("  Mean survivor genotype:", round(mean(result_specialist_genetics$survivors$genotype), 3), "\n")
+  cat("  Genotype range:", round(min(result_specialist_genetics$survivors$genotype), 3), 
+      "to", round(max(result_specialist_genetics$survivors$genotype), 3), "\n")
+} else {
+  cat("! UNEXPECTED: Population extinct! This suggests the landscape may be too harsh.\n")
+  cat("  Consider increasing genotype_sds or reducing population size.\n")
+}
+```
+
+#### Step 4: Evolution (Predicted: Adaptation)
+
+Evolution allows populations to adapt to local conditions over time through mutation and plasticity.
+
+```{r step4, cache=TRUE}
+cat("\n--- STEP 4: EVOLUTION ---\n")
+cat("Setup: Adds mutation and plasticity\n")
+cat("Key change: Population can evolve toward locally optimal genotypes\n")
+cat("Prediction: Better survival, genetic adaptation to landscape\n\n")
+
+result_evolution <- twolife_simulation(
+  landscape_params = list(habitat = genetics_landscape),
+  individual_params = list(
+    initial_population_size = 40,
+    random_seed = MASTER_SEED
+  ),
+  genetic_params = list(
+    genotype_means = runif(40, 0.3, 0.7),
+    genotype_sds = rep(0.15, 40),
+    mutation_rates = rep(0.05, 40),  # Moderate mutation
+    plasticities = rep(0.02, 40)     # Low plasticity
+  ),
+  simulation_params = list(max_events = 250)
+)
+
+cat("RESULT - Survivors:", result_evolution$summary$final_population_size, "\n")
+if (result_evolution$summary$final_population_size > 0) {
+  cat("Evolution enables adaptation!\n")
+  cat("  Mean survivor genotype:", round(mean(result_evolution$survivors$genotype), 3), "\n")
+  cat("  Genotype range:", round(min(result_evolution$survivors$genotype), 3), 
+      "to", round(max(result_evolution$survivors$genotype), 3), "\n")
+  
+  # Compare with previous step
+  if (result_evolution$summary$final_population_size > result_specialist_genetics$summary$final_population_size) {
+    cat("  Evolution improved survival compared to Step 3\n")
+  }
+} else {
+  cat("! Population extinct despite evolution - environmental stress too high\n")
+}
+```
+
+#### Step 5: Habitat Selection (Predicted: Optimization)
+
+The final component is **behavioral adaptation** - the ability to actively search for and select suitable habitat.
+
+```{r step5, cache=TRUE}
+cat("\n--- STEP 5: HABITAT SELECTION ---\n")
+cat("Setup: Individuals actively choose among habitat samples\n")
+cat("Key change: Each individual samples 20 points per movement, selects best match\n")
+cat("Prediction: Highest survival, spatial genetic structure\n\n")
+
+result_habitat_selection <- twolife_simulation(
+  landscape_params = list(habitat = genetics_landscape),
+  individual_params = list(
+    initial_population_size = 40,
+    random_seed = MASTER_SEED
+  ),
+  genetic_params = list(
+    genotype_means = runif(40, 0.3, 0.7),
+    genotype_sds = rep(0.15, 40),
+    mutation_rates = rep(0.05, 40),
+    plasticities = rep(0.02, 40),
+    sampling_points = rep(20, 40)  # Habitat selection behavior
+  ),
+  simulation_params = list(max_events = 250)
+)
+
+cat("RESULT - Survivors:", result_habitat_selection$summary$final_population_size, "\n")
+if (result_habitat_selection$summary$final_population_size > 0) {
+  cat("Habitat selection optimizes survival!\n")
+  cat("  Mean survivor genotype:", round(mean(result_habitat_selection$survivors$genotype), 3), "\n")
+  cat("  Genotype range:", round(min(result_habitat_selection$survivors$genotype), 3), 
+      "to", round(max(result_habitat_selection$survivors$genotype), 3), "\n")
+  
+  # Compare with previous step
+  if (result_habitat_selection$summary$final_population_size > result_evolution$summary$final_population_size) {
+    cat("  Habitat selection improved survival compared to Step 4\n")
+  }
+} else {
+  cat("! Population extinct despite all mechanisms - check parameter settings\n")
+}
+```
+
+### Genetics Progression Summary
+
+```{r genetics_summary}
+# Compare all genetics results
+genetics_results <- data.frame(
+  Scenario = c("Default", "Variable", "Generalists", "Evolution", "Habitat Selection"),
+  Final_Pop = c(
+    result_no_genetics$summary$final_population_size,
+    result_simple_genetics$summary$final_population_size,
+    result_specialist_genetics$summary$final_population_size,
+    result_evolution$summary$final_population_size,
+    result_habitat_selection$summary$final_population_size
+  ),
+  Duration = c(
+    round(result_no_genetics$summary$duration, 1),
+    round(result_simple_genetics$summary$duration, 1),
+    round(result_specialist_genetics$summary$duration, 1),
+    round(result_evolution$summary$duration, 1),
+    round(result_habitat_selection$summary$duration, 1)
+  ),
+  Key_Feature = c(
+    "No flexibility",
+    "Variable optima",
+    "Niche width",
+    "Evolution",
+    "Behavior"
+  ),
+  Interpretation = c(
+    "Extinct - too specialized",
+    "Extinct - still no flexibility", 
+    "Survived - niche width works",
+    "Better survival - evolution helps",
+    "Optimal - behavior + genetics"
+  )
+)
+
+print(genetics_results)
+```
+
+```{r genetics_barplot, fig.height=5, fig.width=8}
+# Visualize progression
+barplot(genetics_results$Final_Pop,
+        names.arg = genetics_results$Scenario,
+        main = "Genetic Complexity vs. Survival",
+        ylab = "Final Population Size",
+        col = c("red", "orange", "yellow", "lightgreen", "green"),
+        las = 2)  # Rotate x-axis labels
+```
+
+### Spatial Genetics Analysis
+
+When populations survive with full genetic machinery, we can examine spatial patterns of genotype distributions:
+
+```{r spatial_genetics, fig.height=5, fig.width=7}
+if (result_habitat_selection$summary$final_population_size > 0) {
+  cat("Final genotype distribution (with full genetics):\n")
+  print(summary(result_habitat_selection$survivors$genotype))
+  
+  # Plot survivors colored by genotype
+  plot_simulation_on_landscape(result_habitat_selection,
+                               main = "Survivors Colored by Genotype (Full Genetics)",
+                               show_genotypes = TRUE,
+                               landscape_colors = "terrain")
+} else {
+  cat("No survivors for spatial genetics analysis\n")
+}
+```
+
+```{r spatial_comparison, fig.height=8, fig.width=10}
+# Compare spatial patterns across scenarios
+par(mfrow = c(2, 2))
+
+if (result_specialist_genetics$summary$final_population_size > 0) {
+  plot_simulation_on_landscape(result_specialist_genetics,
+                               main = "Generalists Only",
+                               point_color = "blue",
+                               landscape_colors = "terrain")
+} else {
+  plot(1, 1, type = "n", main = "Generalists Only\n(No Survivors)", xlab = "", ylab = "")
+  text(1, 1, "Population\nExtinct", cex = 1.5, col = "red")
+}
+
+if (result_evolution$summary$final_population_size > 0) {
+  plot_simulation_on_landscape(result_evolution,
+                               main = "With Evolution",
+                               point_color = "purple",
+                               landscape_colors = "terrain")
+} else {
+  plot(1, 1, type = "n", main = "With Evolution\n(No Survivors)", xlab = "", ylab = "")
+  text(1, 1, "Population\nExtinct", cex = 1.5, col = "red")
+}
+
+if (result_habitat_selection$summary$final_population_size > 0) {
+  plot_simulation_on_landscape(result_habitat_selection,
+                               main = "With Habitat Selection",
+                               show_genotypes = TRUE,
+                               landscape_colors = "terrain")
+} else {
+  plot(1, 1, type = "n", main = "With Habitat Selection\n(No Survivors)", xlab = "", ylab = "")
+  text(1, 1, "Population\nExtinct", cex = 1.5, col = "red")
+}
+
+plot_landscape_world_coords(genetics_landscape, main = "Base Landscape", colors = "terrain")
+par(mfrow = c(1, 1))
+```
+
+## Key Insights and Biological Lessons
+
+From this progressive analysis, we learn several important biological principles:
+
+1. **Genetic diversity alone is insufficient** (Steps 1-2: extinction) - simply having different genotypes doesn't guarantee survival if individuals are too specialized.
+
+2. **Niche width is critical for survival** (Step 3: breakthrough) - the ability to tolerate a range of environmental conditions around the optimum is essential for persistence in heterogeneous landscapes.
+
+3. **Evolution improves adaptation** (Step 4: better performance) - mutation and plasticity allow populations to track changing conditions and optimize their traits.
+
+4. **Behavior optimizes outcomes** (Step 5: highest survival) - active habitat selection allows individuals to find the best available conditions, maximizing the benefits of genetic adaptation.
+
+**Central biological lesson:** Both **genetic flexibility** AND **behavioral ability** are needed for persistence in heterogeneous environments. Neither alone is sufficient.
+
+## Tips for Further Exploration
+
+- **Scaling up:** For larger studies, increase `cells_per_side` (landscape resolution) and `initial_population_size`, but also increase `max_events` proportionally
+- **Parameter sensitivity:** Try different values of `genotype_sds`, `mutation_rates`, and `sampling_points` to see how they affect outcomes
+- **Landscape effects:** Experiment with different `fractality` values and `habitat_proportion` to understand spatial pattern effects
+- **Boundary conditions:** Test different `boundary_condition` settings (0=absorbing, 1=periodic, 2=reflective) for edge effects
+- **Reproducibility:** Always use `random_seed` for reproducible results
+
+## Session Information
+
+```{r session_info}
+sessionInfo()
+```
+
+---
+
+**Reproducibility note:** All results in this vignette are fully reproducible using master seed `r MASTER_SEED`. Total computation time is typically 2-3 minutes on a standard laptop.
