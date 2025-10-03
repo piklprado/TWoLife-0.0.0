@@ -1,5 +1,5 @@
 # functions.R - Complete TWoLife R interface
-# UPDATED: Fixed binary landscape colors (0=white, 1=green) and documentation warnings
+# UPDATED: Fixed NA handling in correlation comparisons
 
 # ============================================================================
 # CORE SIMULATION FUNCTIONS
@@ -1003,7 +1003,7 @@ plot_simulation_on_landscape <- function(simulation_result,
       # Binary landscapes: 0 = white (matrix), 1 = green (habitat)
       color_palette <- c("white", "#228B22")
       if (is_uniform) {
-        color_palette <- if(z_range[1] == 0) "white" else "#228B22"
+        color_palette <- if (z_range[1] == 0) "white" else "#228B22"
       }
     } else {
       color_palette <- colorRampPalette(c("#F5F5DC", "#90EE90", "#228B22", "#006400"))(100)
@@ -1154,7 +1154,8 @@ validate_habitat_matching <- function(simulation_result,
     if (n_survivors > 1) {
       correlation <- cor(trait_values, habitat_at_survivors)
       cat("\n", trait_name, "-Habitat correlation:", round(correlation, 3), "\n", sep="")
-      if (correlation > 0.3) {
+      # FIXED: Check for NA before comparing
+      if (!is.na(correlation) && correlation > 0.3) {
         cat("  -> Positive match: individuals in habitat matching their", tolower(trait_name), "\n")
       }
     }
@@ -1586,14 +1587,19 @@ print.genotype_habitat_mismatch <- function(x, ...) {
     cat("Poor fitness: Individuals poorly matched to habitat\n")
   }
   
-  if (x$correlation > 0.5) {
-    cat("Strong positive correlation: Effective habitat selection\n")
-  } else if (x$correlation > 0.3) {
-    cat("Moderate positive correlation: Some habitat selection\n")
-  } else if (x$correlation > 0) {
-    cat("Weak positive correlation: Limited habitat selection\n")
+  # FIXED: Check for NA before comparing
+  if (!is.na(x$correlation)) {
+    if (x$correlation > 0.5) {
+      cat("Strong positive correlation: Effective habitat selection\n")
+    } else if (x$correlation > 0.3) {
+      cat("Moderate positive correlation: Some habitat selection\n")
+    } else if (x$correlation > 0) {
+      cat("Weak positive correlation: Limited habitat selection\n")
+    } else {
+      cat("No/negative correlation: Poor or absent habitat selection\n")
+    }
   } else {
-    cat("No/negative correlation: Poor or absent habitat selection\n")
+    cat("Correlation: NA (insufficient data variation)\n")
   }
   
   if (x$percent_high_fitness > 50) {
