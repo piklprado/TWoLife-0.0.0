@@ -42,31 +42,3 @@ Generates a fractal landscape using spatial autocorrelation. Supports both
 square and rectangular landscapes, and can create either continuous or
 binary (habitat/matrix) landscapes.
 }
-\examples{
-\dontrun{
-# Binary landscape (30\% habitat)
-landscape1 <- create_fractal_landscape(
-  cells_per_row = 50,
-  fractality = 0.6,
-  habitat_proportion = 0.3,
-  return_as_landscape_params = TRUE
-)
-
-# Continuous landscape (habitat quality varies)
-landscape2 <- create_fractal_landscape(
-  cells_per_row = 50,
-  fractality = 0.5,
-  min_value = 0,
-  max_value = 1
-)
-
-# Rectangular landscape
-landscape3 <- create_fractal_landscape(
-  cells_per_row = 50,
-  cells_per_col = 100,
-  fractality = 0.7,
-  habitat_proportion = 0.4
-)
-}
-
-}

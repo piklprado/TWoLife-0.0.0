@@ -6,18 +6,6 @@
 \usage{
 quick_plot_result(simulation_result, ...)
 }
-\arguments{
-\item{simulation_result}{A twolife_result object}
-
-\item{...}{Additional arguments passed to plot_simulation_on_landscape}
-}
 \description{
-Convenience wrapper for plot_simulation_on_landscape with sensible defaults.
-}
-\examples{
-\dontrun{
-result <- twolife_simulation(...)
-quick_plot_result(result)
-}
-
+Quick Plot of Simulation Results
 }

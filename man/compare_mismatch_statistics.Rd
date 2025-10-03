@@ -6,30 +6,6 @@
 \usage{
 compare_mismatch_statistics(result_list)
 }
-\arguments{
-\item{result_list}{Named list of twolife_result objects}
-}
-\value{
-Invisibly returns list containing:
-  \itemize{
-    \item \code{comparison}: Data frame with summary statistics for each scenario
-    \item \code{detailed}: List of full mismatch analysis objects
-  }
-}
 \description{
-Computes and compares fitness-based habitat matching statistics across
-multiple simulation scenarios. Useful for comparing different parameter
-settings or selection strengths.
-}
-\examples{
-\dontrun{
-results <- list(
-  no_selection = result1,
-  weak_selection = result2,
-  strong_selection = result3
-)
-comparison <- compare_mismatch_statistics(results)
-print(comparison$comparison)
-}
-
+Compare Mismatch Statistics Across Multiple Simulations
 }

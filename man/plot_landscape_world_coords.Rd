@@ -14,34 +14,7 @@ plot_landscape_world_coords(
   add_grid = TRUE
 )
 }
-\arguments{
-\item{landscape_data}{Matrix or list(habitat = matrix)}
-
-\item{cell_size}{Numeric. Size of each cell (default: 1.0)}
-
-\item{filename}{Character. File path for export (currently unused)}
-
-\item{main}{Character. Plot title (default: "Landscape (World Coordinates)")}
-
-\item{colors}{Character. Color scheme: "habitat" (green tones), "terrain",
-or "viridis" (default: "habitat")}
-
-\item{show_legend}{Logical. Show color scale legend (default: TRUE, currently unused)}
-
-\item{add_grid}{Logical. Add grid lines and axes (default: TRUE)}
-}
-\value{
-Invisibly returns NULL
-}
 \description{
 Visualizes landscape in world coordinate system with proper axis scaling.
 Works with both square and rectangular landscapes.
-}
-\examples{
-\dontrun{
-landscape <- create_fractal_landscape(50, 50, fractality = 0.5,
-                                     habitat_proportion = 0.3)
-plot_landscape_world_coords(landscape)
-}
-
 }

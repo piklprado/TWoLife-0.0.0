@@ -6,14 +6,6 @@
 \usage{
 \method{print}{twolife_result}(x, ...)
 }
-\arguments{
-\item{x}{A twolife_result object}
-
-\item{...}{Additional arguments (unused)}
-}
-\value{
-Invisibly returns the input object
-}
 \description{
 Print Method for TWoLife Results
 }

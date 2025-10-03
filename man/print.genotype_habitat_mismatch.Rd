@@ -6,14 +6,6 @@
 \usage{
 \method{print}{genotype_habitat_mismatch}(x, ...)
 }
-\arguments{
-\item{x}{A genotype_habitat_mismatch object}
-
-\item{...}{Additional arguments (unused)}
-}
-\value{
-Invisibly returns the input object
-}
 \description{
 Print Method for Mismatch Statistics
 }

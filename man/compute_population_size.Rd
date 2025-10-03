@@ -10,20 +10,9 @@ compute_population_size(result)
 \item{result}{Result object from twolife_simulation}
 }
 \value{
-Data frame with columns:
-  \itemize{
-    \item \code{time}: Event times
-    \item \code{population_size}: Cumulative population size
-  }
+Data frame with columns time and population_size
 }
 \description{
 Computes population size at each event time from simulation results.
-}
-\examples{
-\dontrun{
-result <- twolife_simulation(...)
-trajectory <- compute_population_size(result)
-plot(trajectory$time, trajectory$population_size, type = "l")
-}
-
+Works with all history_detail levels (only requires times and types).
 }

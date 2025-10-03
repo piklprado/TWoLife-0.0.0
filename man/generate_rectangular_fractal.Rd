@@ -6,16 +6,6 @@
 \usage{
 generate_rectangular_fractal(rows, cols, fractality)
 }
-\arguments{
-\item{rows}{Number of rows}
-
-\item{cols}{Number of columns}
-
-\item{fractality}{Fractal parameter (0-1)}
-}
-\value{
-Matrix with fractal pattern
-}
 \description{
 Internal function to generate fractal patterns for rectangular landscapes.
 Uses iterative smoothing with neighbor averaging.

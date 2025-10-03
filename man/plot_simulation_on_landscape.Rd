@@ -9,46 +9,14 @@ plot_simulation_on_landscape(
   point_size = 2,
   point_color = "red",
   point_shape = 16,
-  show_genotypes = FALSE,
+  color_by = "none",
   landscape_colors = "habitat",
   main = NULL,
   filename = NULL,
   add_stats = TRUE
 )
 }
-\arguments{
-\item{simulation_result}{A twolife_result object}
-
-\item{point_size}{Numeric. Size of points (default: 2)}
-
-\item{point_color}{Character. Color of survivor points (default: "red")}
-
-\item{point_shape}{Numeric. Point shape (pch value) (default: 16)}
-
-\item{show_genotypes}{Logical. Color points by genotype using heat colors
-(default: FALSE)}
-
-\item{landscape_colors}{Character. Color scheme for background landscape:
-"habitat", "terrain", or "viridis" (default: "habitat")}
-
-\item{main}{Character. Plot title. If NULL, auto-generates title with
-survivor count (default: NULL)}
-
-\item{filename}{Character. Optional filename for export (currently unused)}
-
-\item{add_stats}{Logical. Add population statistics (currently unused) (default: TRUE)}
-}
-\value{
-Invisibly returns the simulation result object
-}
 \description{
 Visualizes simulation results by overlaying survivor positions on the
-landscape. Points can be colored by genotype or a single color.
-}
-\examples{
-\dontrun{
-result <- twolife_simulation(...)
-plot_simulation_on_landscape(result, show_genotypes = TRUE)
-}
-
+landscape. Points can be colored by genotype, phenotype, or a single color.
 }

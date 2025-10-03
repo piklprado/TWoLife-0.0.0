@@ -13,15 +13,15 @@ create_corner_landscape(
 )
 }
 \arguments{
-\item{cells_per_row}{Integer >= 4. Number of rows}
+\item{cells_per_row}{Integer greater than or equal to 4. Number of rows}
 
-\item{cells_per_col}{Integer >= 4. Number of columns. If NULL, creates square landscape.}
+\item{cells_per_col}{Integer greater than or equal to 4. Number of columns. If NULL, creates square landscape.}
 
 \item{corner}{Character. Corner location for habitat: "top-left", "top-right",
 "bottom-left", or "bottom-right" (default: "top-left")}
 
 \item{corner_size}{Integer. Size of habitat corner in cells. If NULL,
-automatically set to 25% of the smallest dimension (default: NULL)}
+automatically set to 25 percent of the smallest dimension (default: NULL)}
 
 \item{return_as_landscape_params}{Logical. Return as list(habitat=matrix)
 suitable for twolife_simulation (default: FALSE)}
@@ -32,23 +32,4 @@ Either a binary matrix or list with habitat component
 \description{
 Creates binary landscapes with habitat confined to one corner, useful for
 testing habitat selection and dispersal. Supports rectangular landscapes.
-}
-\examples{
-\dontrun{
-# Square landscape with top-left habitat
-landscape <- create_corner_landscape(
-  cells_per_row = 50,
-  corner = "top-left",
-  corner_size = 10,
-  return_as_landscape_params = TRUE
-)
-
-# Rectangular landscape with bottom-right habitat
-landscape2 <- create_corner_landscape(
-  cells_per_row = 30,
-  cells_per_col = 60,
-  corner = "bottom-right"
-)
-}
-
 }
