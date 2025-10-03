@@ -5,7 +5,8 @@
 \title{Create Fractal Landscape}
 \usage{
 create_fractal_landscape(
-  cells_per_side,
+  cells_per_row,
+  cells_per_col = NULL,
   fractality,
   min_value = 0,
   max_value = 1,
@@ -14,94 +15,58 @@ create_fractal_landscape(
 )
 }
 \arguments{
-\item{cells_per_side}{Integer. Number of cells per side of the square landscape (must be >= 2)}
+\item{cells_per_row}{Integer. Number of cells per row}
 
-\item{fractality}{Numeric. Fractal parameter controlling spatial correlation (0-1).
-Higher values (0.7-0.9) create smoother, more connected patterns.
-Lower values (0.1-0.4) create more fragmented, random-like patterns.}
+\item{cells_per_col}{Integer. Number of cells per column. If NULL, creates square landscape.}
+
+\item{fractality}{Numeric between 0 and 1. Higher values create more spatially
+autocorrelated (clumped) patterns. 0 = random, 1 = highly structured.}
 
 \item{min_value}{Numeric. Minimum habitat value for continuous landscapes (default: 0.0)}
 
 \item{max_value}{Numeric. Maximum habitat value for continuous landscapes (default: 1.0)}
 
-\item{habitat_proportion}{Numeric. Proportion of cells classified as habitat (0-1).
-If specified, creates binary landscape (0/1). If NULL, creates continuous landscape.}
+\item{habitat_proportion}{Numeric between 0 and 1. If provided, creates binary
+landscape with this proportion of cells as habitat (value 1), rest as matrix
+(value 0). If NULL, creates continuous landscape.}
 
-\item{return_as_landscape_params}{Logical. If TRUE, returns list(habitat = matrix)
-suitable for direct use in \code{\link{twolife_simulation}}. If FALSE, returns matrix only (default: FALSE).}
+\item{return_as_landscape_params}{Logical. If TRUE, returns list(habitat=matrix)
+suitable for direct use in twolife_simulation. If FALSE, returns matrix only.}
 }
 \value{
-Square matrix representing habitat grid, or list with habitat component if 
-  \code{return_as_landscape_params = TRUE}
+Either a matrix (if return_as_landscape_params=FALSE) or a list with
+  habitat component (if return_as_landscape_params=TRUE)
 }
 \description{
-Generate realistic heterogeneous landscapes using fractal algorithms.
-Creates spatial patterns with controllable fragmentation and habitat proportion,
-suitable for testing spatial population models.
+Generates a fractal landscape using spatial autocorrelation. Supports both
+square and rectangular landscapes, and can create either continuous or
+binary (habitat/matrix) landscapes.
 }
-\details{
-This function uses the diamond-square fractal algorithm to generate spatially
-autocorrelated landscapes. The fractality parameter controls the degree of
-spatial correlation:
-
-\describe{
-  \item{High fractality (0.7-0.9)}{Smooth gradients, large connected patches}
-  \item{Medium fractality (0.4-0.7)}{Moderate fragmentation, intermediate patches}  
-  \item{Low fractality (0.1-0.4)}{High fragmentation, small scattered patches}
-}
-
-For binary landscapes, \code{habitat_proportion} determines the fraction of cells
-with value 1 (habitat) vs 0 (matrix). The threshold is applied to the
-continuous fractal pattern, preserving spatial structure.
-}
-\section{Dependencies}{
-
-Requires the 'rflsgen' package for fractal generation. If not installed, 
-install with: \code{install.packages("rflsgen")}
-}
-
 \examples{
-# Binary fragmented landscape (agricultural mosaic)
-fragmented <- create_fractal_landscape(
-  cells_per_side = 10,
-  fractality = 0.3,        # High fragmentation
-  habitat_proportion = 0.4  # 40\% habitat
-)
-
-# Binary connected landscape (protected area)
-connected <- create_fractal_landscape(
-  cells_per_side = 10,
-  fractality = 0.8,        # Low fragmentation  
-  habitat_proportion = 0.4  # 40\% habitat
-)
-
-\donttest{
-# Continuous environmental gradient
-gradient <- create_fractal_landscape(
-  cells_per_side = 20,
-  fractality = 0.7,
-  habitat_proportion = NULL  # Continuous values
-)
-
-# Ready for simulation use
-landscape_params <- create_fractal_landscape(
-  cells_per_side = 15,
+\dontrun{
+# Binary landscape (30\% habitat)
+landscape1 <- create_fractal_landscape(
+  cells_per_row = 50,
   fractality = 0.6,
   habitat_proportion = 0.3,
   return_as_landscape_params = TRUE
 )
 
-# Use directly in simulation
-result <- twolife_simulation(
-  landscape_params = landscape_params,
-  individual_params = list(initial_population_size = 20),
-  simulation_params = list(max_events = 100)
+# Continuous landscape (habitat quality varies)
+landscape2 <- create_fractal_landscape(
+  cells_per_row = 50,
+  fractality = 0.5,
+  min_value = 0,
+  max_value = 1
+)
+
+# Rectangular landscape
+landscape3 <- create_fractal_landscape(
+  cells_per_row = 50,
+  cells_per_col = 100,
+  fractality = 0.7,
+  habitat_proportion = 0.4
 )
 }
 
-}
-\seealso{
-\code{\link{create_corner_landscape}} for simpler test landscapes,
-\code{\link{plot_landscape_world_coords}} for visualization,
-\code{\link{twolife_simulation}} for using landscapes in simulations
 }

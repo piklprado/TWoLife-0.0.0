@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <Rcpp.h>
 
-// FIXED: Constructor with proper memory management and validation - Class Constructor
+// FIXED: Constructor with proper memory management and validation - updated for rectangular landscapes
 Landscape::Landscape(double neighbor_radius,
                      int initial_population_size,
                      double vision_angle,
@@ -29,25 +29,26 @@ Landscape::Landscape(double neighbor_radius,
                      const vector<double>& mutation_rates,
                      const vector<double>& plasticities,
                      const vector<int>& sampling_points,
+                     const vector<double>& habitat_selection_temperatures,
                      bool neutral_mode):
-  // Initialize const members - This section is similar to regular attribution and is run before brackets
-  world_side_length(habitat.nrow() * cell_size),
-  initial_population_size(initial_population_size),  cells_per_side(habitat.nrow()),
+  // Initialize const members - updated for rectangular landscapes
+  world_width(habitat.ncol() * cell_size),
+  world_height(habitat.nrow() * cell_size),
+  initial_population_size(initial_population_size),
+  cells_per_row(habitat.nrow()),
+  cells_per_col(habitat.ncol()),
   cell_size(cell_size),
   boundary_condition(boundary_condition),
   initial_placement_mode(initial_placement_mode),
   num_habitat_patches(0),
-  // FIXED: Initialize vectors with proper size
-  habitat_grid(habitat.nrow(), vector<double>(habitat.nrow(), 0.0)),
-  patch_grid(habitat.nrow(), vector<int>(habitat.nrow(), 0)),
+  // FIXED: Initialize vectors with proper rectangular size
+  habitat_grid(habitat.nrow(), vector<double>(habitat.ncol(), 0.0)),
+  patch_grid(habitat.nrow(), vector<int>(habitat.ncol(), 0)),
   world_time(0)
 {
-  // Input validation
+  // Input validation - removed square matrix requirement
   if (habitat.nrow() <= 0 || habitat.ncol() <= 0) {
     throw invalid_argument("habitat matrix dimensions must be positive");
-  }
-  if (habitat.nrow() != habitat.ncol()) {
-    throw invalid_argument("habitat matrix must be square (nrow must equal ncol)");
   }
   if (cell_size <= 0.0) {
     throw invalid_argument("cell_size must be positive");
@@ -56,10 +57,10 @@ Landscape::Landscape(double neighbor_radius,
     throw invalid_argument("initial_population_size must be positive");
   }
   
-  // FIXED: Safe copying of habitat grid from matrix input
-  for (int i = 0; i < cells_per_side; i++) // Passes through the rows (y)
+  // FIXED: Safe copying of habitat grid from matrix input - updated for rectangular dimensions
+  for (int i = 0; i < cells_per_row; i++) // Passes through the rows (y)
   {
-    for (int j = 0; j < cells_per_side; j++) // Passes through the columns (x)
+    for (int j = 0; j < cells_per_col; j++) // Passes through the columns (x)
     {
       habitat_grid[i][j] = habitat(i, j); // Direct matrix access: i=row(y), j=col(x)
     }
@@ -67,9 +68,9 @@ Landscape::Landscape(double neighbor_radius,
   
   // Attributes values to the landscape pixels, determining the patch they belong to
   int component = 0; // Counter variable used for identifying the patches
-  // FIXED: Proper loop structure and indentation
-  for (int k = 0; k < cells_per_side; ++k) { // Passes through the rows
-    for (int l = 0; l < cells_per_side; ++l) { // Passes through the columns
+  // FIXED: Proper loop structure for rectangular landscapes
+  for (int k = 0; k < cells_per_row; ++k) { // Passes through the rows
+    for (int l = 0; l < cells_per_col; ++l) { // Passes through the columns
       if (!patch_grid[k][l] && habitat_grid[k][l]) {
         identify_habitat_patches(k, l, ++component); // Checks if each landscape pixel has already been assigned a patch identification value AND if it is a non-matrix patch
       }
@@ -80,9 +81,9 @@ Landscape::Landscape(double neighbor_radius,
   // FIXED: Initialize patch_areas vector with proper size
   patch_areas.resize(num_habitat_patches + 1, 0.0); // Points to a new vector object used for storing the area of all habitats and the matrix
   
-  // Calculate patch areas - FIXED: Proper loop structure and indentation
-  for (int i = 0; i < cells_per_side; i++) { // Passes through the rows
-    for (int j = 0; j < cells_per_side; j++) { // Passes through the columns
+  // Calculate patch areas - updated for rectangular landscapes
+  for (int i = 0; i < cells_per_row; i++) { // Passes through the rows
+    for (int j = 0; j < cells_per_col; j++) { // Passes through the columns
       int patch_id = patch_grid[i][j];
       if (patch_id >= 0 && patch_id < static_cast<int>(patch_areas.size())) {
         patch_areas[patch_id] += cell_size * cell_size; // Indexes the patch_areas vector by the patch identification numbers of each pixel in the landscape so that it adds the number of pixels of each patch multiplied by the area of a pixel
@@ -90,19 +91,21 @@ Landscape::Landscape(double neighbor_radius,
     }
   }
   
-  // Modification of the radius for the global density case
+  // Modification of the radius for the global density case - updated for rectangular world
   if(density_type == 0) { // Checks if the density type is set to zero (global)
-    neighbor_radius = world_side_length / sqrt(M_PI); // Changes the perception radius to the equivalent of a radius of a circle with the same area of a square with the length of the landscape
+    double world_area = world_width * world_height;
+    neighbor_radius = sqrt(world_area / M_PI); // Changes the perception radius to the equivalent of a radius of a circle with the same area as the rectangular landscape
   }
   
-  // FIXED: Exception-safe population initialization - Inserts initial_population_size individuals in the landscape through the initialize_population() function
+  // FIXED: Exception-safe population initialization
   try {
     initialize_population(neighbor_radius, initial_population_size, vision_angle, step_length,
                           base_dispersal_rate, base_birth_rate, base_mortality_rate,
                           birth_density_slope, mortality_density_slope,
                           matrix_mortality_multiplier, matrix_dispersal_multiplier, density_type,
                           initial_x_coordinates, initial_y_coordinates, genotype_means,
-                          genotype_sds, mutation_rates, plasticities, sampling_points, neutral_mode);
+                          genotype_sds, mutation_rates, plasticities, sampling_points, 
+                          habitat_selection_temperatures, neutral_mode);
     
     // Update all individuals
     for (auto& individual : population) // Passes through each individual
@@ -125,7 +128,7 @@ Landscape::Landscape(double neighbor_radius,
   }
 }
 
-// FIXED: Population initialization with smart pointers and validation - Function responsible for calling the constructor of the Individual class to create N individuals at the start of the simulation
+// FIXED: Population initialization with smart pointers and validation - updated coordinate ranges for rectangular world
 void Landscape::initialize_population(
     const double neighbor_radius,
     const int initial_population_size,
@@ -146,6 +149,7 @@ void Landscape::initialize_population(
     const vector<double>& mutation_rates,
     const vector<double>& plasticities,
     const vector<int>& sampling_points,
+    const vector<double>& habitat_selection_temperatures,
     bool neutral_mode)
 {
   Individual::reset_id(); // Restarts the id counter of the individuals
@@ -153,17 +157,34 @@ void Landscape::initialize_population(
   // FIXED: Reserve space to avoid reallocations during population growth
   population.reserve(initial_population_size * 2);  // Allow for growth
   
+  // CORRECTED: Validate array sizes UNCONDITIONALLY (not dependent on neutral_mode)
+  if (mutation_rates.size() != static_cast<size_t>(initial_population_size)) {
+    throw invalid_argument("Mutation rates array size mismatch");
+  }
+  if (plasticities.size() != static_cast<size_t>(initial_population_size)) {
+    throw invalid_argument("Plasticities array size mismatch");
+  }
+  if (sampling_points.size() != static_cast<size_t>(initial_population_size)) {
+    throw invalid_argument("Sampling points array size mismatch");
+  }
+  if (habitat_selection_temperatures.size() != static_cast<size_t>(initial_population_size)) {
+    throw invalid_argument("Habitat selection temperatures array size mismatch");
+  }
+  
+  // Validate neutral mode specific sizes
+  if (neutral_mode) {
+    if (genotype_means.size() != static_cast<size_t>(initial_population_size) ||
+        genotype_sds.size() != static_cast<size_t>(initial_population_size)) {
+      throw invalid_argument("Genotype arrays size mismatch in neutral mode");
+    }
+  }
+  
   vector<double> genotype, width; // Creates vectors for storing either a genotype/width value (normal case), or all of them (null case)
   
   if (!neutral_mode) { // Checks if this is not a Null simulation run
     genotype.resize(1); // Resizes the genotype vectors for containing only a value
     width.resize(1); // Resizes the width vectors for containing only a value
   } else{ // Checks if this is a Null simulation run
-    // Validate input sizes for neutral mode
-    if (genotype_means.size() != static_cast<size_t>(initial_population_size) ||
-        genotype_sds.size() != static_cast<size_t>(initial_population_size)) {
-      throw invalid_argument("Genotype arrays size mismatch in neutral mode");
-    }
     genotype.reserve(initial_population_size);
     width.reserve(initial_population_size);
     for (int i = 0; i < initial_population_size; i++) { // Pass through each individual
@@ -174,10 +195,11 @@ void Landscape::initialize_population(
   
   for (int i = 0; i < initial_population_size; i++) // Goes through the amount of initial individuals selected
   {
-    // Validate array access
+    // CORRECTED: Validate array access including habitat_selection_temperatures
     if (i >= static_cast<int>(mutation_rates.size()) || 
         i >= static_cast<int>(plasticities.size()) ||
-        i >= static_cast<int>(sampling_points.size())) {
+        i >= static_cast<int>(sampling_points.size()) ||
+        i >= static_cast<int>(habitat_selection_temperatures.size())) {
       throw out_of_range("Parameter array index out of bounds");
     }
     
@@ -192,7 +214,7 @@ void Landscape::initialize_population(
     
     double x_coord, y_coord;
     
-    // FIXED: Safe coordinate initialization based on placement mode - Considerations of different types of starting positions
+    // FIXED: Safe coordinate initialization based on placement mode - updated for rectangular world
     switch (initial_placement_mode) {
     case 0: // Checks if the initial_placement_mode is set to 0 (origin)
       x_coord = 0.0; // X Coordinate
@@ -200,8 +222,8 @@ void Landscape::initialize_population(
       break;
       
     case 1: // Checks if the initial_placement_mode is set to 1 (Random initial positions)
-      x_coord = runif(-world_side_length/2, world_side_length/2); // X Coordinate
-      y_coord = runif(-world_side_length/2, world_side_length/2); // Y Coordinate
+      x_coord = runif(-world_width/2, world_width/2); // X Coordinate - uses world width
+      y_coord = runif(-world_height/2, world_height/2); // Y Coordinate - uses world height
       break;
       
     case 2: // Checks if the initial_placement_mode is set to 2, Random initial positions with normal distribution
@@ -234,7 +256,6 @@ void Landscape::initialize_population(
         base_dispersal_rate, // The rate at which individuals disperse
         neighbor_radius, // Density dependence radius
         base_birth_rate, // The basal birth rate (The rate at which individuals give birth on a habitat patch without neighbours)
-        99, // Random seed
         birth_density_slope, // The slope of the birth density dependence function
         mortality_density_slope, // The slope of the death density dependence function
         matrix_mortality_multiplier, // Constant that indicates how many times higher the death rate should be on non-habitat pixels
@@ -244,7 +265,8 @@ void Landscape::initialize_population(
                       plasticities[i], // Plasticity
                                   genotype, // Individual's genotype trait mean
                                   width, // Individual's genotype trait width
-                                  sampling_points[i] // Number of sampling points
+                                  sampling_points[i], // Number of sampling points
+                                                 habitat_selection_temperatures[i] // Habitat selection temperature
       );
       
       population.push_back(move(individual));
@@ -306,7 +328,7 @@ int Landscape::select_next_individual()
   return selected_individual_index; // Returns the individual with the lowest time
 }
 
-//FIXED: Safe action performance with smart pointers and validation - Function that executes the selected action. It also returns a positive boolean value if the individual disperses out of the landscape boundary.
+//FIXED: Safe action performance with smart pointers and validation
 bool Landscape::perform_action(int action_code, int individual_index)
 {
   // Input validation
@@ -353,50 +375,52 @@ bool Landscape::perform_action(int action_code, int individual_index)
   return left_boundary; // Returns true if an individual left the landscape boundaries
 }
 
-// FIXED: Safe boundary condition application with consistent logic - Function to apply the desired boundary conditions when a dispersal event leaves an individual out of the landscape boundaries
+// FIXED: Safe boundary condition application with rectangular logic
 bool Landscape::apply_boundary_condition(Individual* individual)
 {
   bool left_boundary = false; // Initializes a boolean variable used to record if an individual has left the boundaries of the landscape as false
+  double half_width = world_width / 2;
+  double half_height = world_height / 2;
   
   switch(boundary_condition) // Switches between conditions (0= absorbing, 1= periodic (pacman), 2= reflective)
   {
     
-  case 0: //0= absorbing - FIXED: Consistent boundary checks
-    if(individual->get_x_coordinate() >= world_side_length / 2 || //Checks if the x coordinate is higher than the maximum value OR
-       individual->get_x_coordinate() < -world_side_length / 2 || // if the x coordinate is lower than the minimum value OR
-       individual->get_y_coordinate() >= world_side_length / 2 || // if the y coordinate is higher than the maximum value Or
-       individual->get_y_coordinate() < -world_side_length / 2) // if the x coordinate is lower than the minimum value
+  case 0: //0= absorbing - updated for rectangular boundaries
+    if(individual->get_x_coordinate() >= half_width || //Checks if the x coordinate is higher than the maximum value OR
+       individual->get_x_coordinate() < -half_width || // if the x coordinate is lower than the minimum value OR
+       individual->get_y_coordinate() >= half_height || // if the y coordinate is higher than the maximum value Or
+       individual->get_y_coordinate() < -half_height) // if the y coordinate is lower than the minimum value
     {
       left_boundary = true; // Sets emigration to true
     }
     break;
     
-  case 1: // 1= periodic - FIXED: No fall-through
-    if(individual->get_x_coordinate() < -world_side_length / 2) //Checks if the x coordinate is higher than the maximum value
-      individual->set_x_coordinate(world_side_length + individual->get_x_coordinate()); // Changes the x coordinate to represent the periodic condition (left corner to right corner)
-    if(individual->get_x_coordinate() >= world_side_length / 2) //Checks if the x coordinate is lower than the minimum value
-      individual->set_x_coordinate(individual->get_x_coordinate() - world_side_length); // Changes the x coordinate to represent the periodic condition (right corner to left corner)
-    if(individual->get_y_coordinate() < -world_side_length / 2) //Checks if the y coordinate is higher than the maximum value
-      individual->set_y_coordinate(world_side_length + individual->get_y_coordinate()); // Changes the y coordinate to represent the periodic condition (bottom corner to top corner)
-    if(individual->get_y_coordinate() >= world_side_length / 2) //Checks if the y coordinate is lower than the minimum value
-      individual->set_y_coordinate(individual->get_y_coordinate() - world_side_length); // Changes the y coordinate to represent the periodic condition (up corner to bottom corner)
+  case 1: // 1= periodic - updated for rectangular boundaries
+    if(individual->get_x_coordinate() < -half_width) //Checks if the x coordinate is lower than the minimum value
+      individual->set_x_coordinate(world_width + individual->get_x_coordinate()); // Changes the x coordinate to represent the periodic condition (left edge to right edge)
+    if(individual->get_x_coordinate() >= half_width) //Checks if the x coordinate is higher than the maximum value
+      individual->set_x_coordinate(individual->get_x_coordinate() - world_width); // Changes the x coordinate to represent the periodic condition (right edge to left edge)
+    if(individual->get_y_coordinate() < -half_height) //Checks if the y coordinate is lower than the minimum value
+      individual->set_y_coordinate(world_height + individual->get_y_coordinate()); // Changes the y coordinate to represent the periodic condition (bottom edge to top edge)
+    if(individual->get_y_coordinate() >= half_height) //Checks if the y coordinate is higher than the maximum value
+      individual->set_y_coordinate(individual->get_y_coordinate() - world_height); // Changes the y coordinate to represent the periodic condition (top edge to bottom edge)
     break;
     
-  case 2: // 2= reflective - FIXED: Correct reflection logic
-    if(individual->get_x_coordinate() < -world_side_length / 2) //Checks if the x coordinate is lower than the minimum value
-      individual->set_x_coordinate(-world_side_length / 2 + abs(-world_side_length / 2 - individual->get_x_coordinate())); // Sets the x coordinate to the boundary minus its excess length
-    if(individual->get_x_coordinate() >= world_side_length / 2) //Checks if the x coordinate is higher than the maximum value
-      individual->set_x_coordinate(world_side_length / 2 - abs(world_side_length / 2 - individual->get_x_coordinate()));// Sets the x coordinate to the boundary minus its excess length
-    if(individual->get_y_coordinate() < -world_side_length / 2) //Checks if the y coordinate is lower than the minimum value
-      individual->set_y_coordinate(-world_side_length / 2 + abs(-world_side_length / 2 - individual->get_y_coordinate()));// Sets the y coordinate to the boundary minus its excess length
-    if(individual->get_y_coordinate() >= world_side_length / 2) //Checks if the y coordinate is higher than the maximum value
-      individual->set_y_coordinate(world_side_length / 2 - abs(world_side_length / 2 - individual->get_y_coordinate()));// Sets the y coordinate to the boundary minus its excess length
+  case 2: // 2= reflective - updated for rectangular boundaries
+    if(individual->get_x_coordinate() < -half_width) //Checks if the x coordinate is lower than the minimum value
+      individual->set_x_coordinate(-half_width + abs(-half_width - individual->get_x_coordinate())); // Sets the x coordinate to the boundary plus its excess length (reflected)
+    if(individual->get_x_coordinate() >= half_width) //Checks if the x coordinate is higher than the maximum value
+      individual->set_x_coordinate(half_width - abs(half_width - individual->get_x_coordinate()));// Sets the x coordinate to the boundary minus its excess length (reflected)
+    if(individual->get_y_coordinate() < -half_height) //Checks if the y coordinate is lower than the minimum value
+      individual->set_y_coordinate(-half_height + abs(-half_height - individual->get_y_coordinate()));// Sets the y coordinate to the boundary plus its excess length (reflected)
+    if(individual->get_y_coordinate() >= half_height) //Checks if the y coordinate is higher than the maximum value
+      individual->set_y_coordinate(half_height - abs(half_height - individual->get_y_coordinate()));// Sets the y coordinate to the boundary minus its excess length (reflected)
     break;
   }
   return left_boundary; // Returns a positive boolean value if the individual emigrated
 }
 
-// Function that calculates the distance between two individuals
+// Function that calculates the distance between two individuals - updated for rectangular periodic boundaries
 double Landscape::compute_distance(const Individual* individual_a, const Individual* individual_b) const
 {
   switch(boundary_condition) //switches between boundary condition cases (0= absorbing, 1= periodic (pacman), 2= reflective)
@@ -406,7 +430,7 @@ double Landscape::compute_distance(const Individual* individual_a, const Individ
     return sqrt(pow(individual_a->get_x_coordinate() - individual_b->get_x_coordinate(), 2) + 
                 pow(individual_a->get_y_coordinate() - individual_b->get_y_coordinate(), 2));
     
-  case 1: // The Euclidean distance accounting for the periodic effect (individuals on different edges may be close to one another)
+  case 1: // The Euclidean distance accounting for the periodic effect - updated for rectangular boundaries
     {
       double x1 = individual_a->get_x_coordinate(); // Gets the x coordinate of the first individual
       double x2 = individual_b->get_x_coordinate(); // Gets the x coordinate of the second individual
@@ -414,8 +438,8 @@ double Landscape::compute_distance(const Individual* individual_a, const Individ
       double y2 = individual_b->get_y_coordinate(); // Gets the y coordinate of the second individual
       double dx = abs(x1 - x2); // chooses the lower between x1-x2 and x2-x1
       double dy = abs(y1 - y2); //chooses the lower between y1-y2 and y2-y1
-      dx = min(dx, world_side_length - dx); // chooses the lower between world_side_length-dx and dx
-      dy = min(dy, world_side_length - dy); //chooses the lower between world_side_length-dy and dy
+      dx = min(dx, world_width - dx); // chooses the lower between world_width-dx and dx
+      dy = min(dy, world_height - dy); //chooses the lower between world_height-dy and dy
       return sqrt(dx * dx + dy * dy); // Computes and returns the distance
     }
     
@@ -450,7 +474,7 @@ void Landscape::update_neighbors(Individual* individual) const
   individual->set_neighbors(neighbor_list); // Passes to an individual its neighbourhood list
 }
 
-// FIXED: Safe neighbor list updates - Function for updating individuals neighbours depending on their last action
+// FIXED: Safe neighbor list updates
 void Landscape::update_neighbor_lists(int action_code, int individual_index) const
 {
   if (individual_index < 0 || individual_index >= static_cast<int>(population.size())) {
@@ -524,10 +548,10 @@ void Landscape::update_neighbor_lists(int action_code, int individual_index) con
   }
 }
 
-// FIXED INDEX ORDER: Safe grid access functions - Function that updates if an individual is currently on habitat or matrix
+// FIXED: Safe grid access functions - updated for rectangular grid coordinates
 void Landscape::update_habitat_value(Individual* individual) const {
-  int grid_x = static_cast<int>(individual->get_x_coordinate() / cell_size + cells_per_side / 2); // Finds the pixel X coordinate (column)
-  int grid_y = static_cast<int>((-individual->get_y_coordinate() / cell_size) + cells_per_side / 2); //Finds the pixel y coordinate (row)
+  int grid_x = static_cast<int>(individual->get_x_coordinate() / cell_size + cells_per_col / 2); // Finds the pixel X coordinate (column)
+  int grid_y = static_cast<int>((-individual->get_y_coordinate() / cell_size) + cells_per_row / 2); //Finds the pixel y coordinate (row)
   
   // FIXED: Bounds checking before array access
   if (is_valid_grid_position(grid_x, grid_y)) {
@@ -538,10 +562,10 @@ void Landscape::update_habitat_value(Individual* individual) const {
   }
 }
 
-// FIXED INDEX ORDER: Function to update the patch the individual is currently in
+// Function to update the patch the individual is currently in - updated for rectangular coordinates
 void Landscape::update_patch_id(Individual* individual) const {
-  int grid_x = static_cast<int>(individual->get_x_coordinate() / cell_size + cells_per_side / 2); // Finds the pixel X coordinate (column)
-  int grid_y = static_cast<int>((-individual->get_y_coordinate() / cell_size) + cells_per_side / 2); //Finds the pixel y coordinate (row)
+  int grid_x = static_cast<int>(individual->get_x_coordinate() / cell_size + cells_per_col / 2); // Finds the pixel X coordinate (column)
+  int grid_y = static_cast<int>((-individual->get_y_coordinate() / cell_size) + cells_per_row / 2); //Finds the pixel y coordinate (row)
   
   // FIXED: Bounds checking before array access  
   if (is_valid_grid_position(grid_x, grid_y)) {
@@ -552,11 +576,11 @@ void Landscape::update_patch_id(Individual* individual) const {
   }
 }
 
-// Recursive function that finds and identifies each landscape patch
+// Recursive function that finds and identifies each landscape patch - updated for rectangular boundaries
 void Landscape::identify_habitat_patches(int x, int y, int current_label)
 {
-  if (x < 0 || x >= cells_per_side) return; // Checks if the x coordinate is out of bounds
-  if (y < 0 || y >= cells_per_side) return;// Checks if the y coordinate is out of bounds
+  if (x < 0 || x >= cells_per_row) return; // Checks if the row coordinate is out of bounds
+  if (y < 0 || y >= cells_per_col) return;// Checks if the column coordinate is out of bounds
   if (patch_grid[x][y] || !habitat_grid[x][y]) return; // Checks if the current pixel is already labeled AND if is a habitat pixel
   
   // marks the current cell with its respective patch ID value
@@ -575,13 +599,13 @@ void Landscape::identify_habitat_patches(int x, int y, int current_label)
   identify_habitat_patches(x + 1, y - 1, current_label);
 }
 
-// A function to calculate the density of individuals according to density type (global or local) and considering landscape boundary effects in the calculation.
+// A function to calculate the density of individuals according to density type (global or local) and considering landscape boundary effects in the calculation - updated for rectangular boundaries
 double Landscape::compute_local_density(const Individual* focal_individual) const
 {
   double density; // Creates a temporary variable for storing density
   double radius = focal_individual->get_neighbor_radius();
   double circle_area = M_PI * radius * radius;
-  double world_area = world_side_length * world_side_length;
+  double world_area = world_width * world_height; // Updated for rectangular world
   
   if(circle_area > world_area){ // check if the individual radius would be higher than the landscape
     density = focal_individual->neighborhood_size() / world_area; // Computes the standard case of density using the total area of the world
@@ -596,14 +620,15 @@ double Landscape::compute_local_density(const Individual* focal_individual) cons
      the area of the circle.
      */
     
-    // Condition giving the boundary effects cases
+    // Condition giving the boundary effects cases - updated for rectangular boundaries
     if(focal_individual->get_density_type() == 1) // checks if the density type is set to 1 (local/ within a radius distance)
     {
       double abs_x = abs(focal_individual->get_x_coordinate()); // Stores the absolute value of x
       double abs_y = abs(focal_individual->get_y_coordinate()); // Stores the absolute value of y
-      double half_world_size = world_side_length / 2; // Stores the length of quadrant side
+      double half_width = world_width / 2; // Stores half the world width
+      double half_height = world_height / 2; // Stores half the world height
       
-      if(abs_x > half_world_size - radius || abs_y > half_world_size - radius) // Checks if the x coordinate is within a radius distance from the edge OR if the y coordinate is within a radius distance from the edge
+      if(abs_x > half_width - radius || abs_y > half_height - radius) // Checks if the x coordinate is within a radius distance from the edge OR if the y coordinate is within a radius distance from the edge
       { // OBS: The absolute values retain their distance from the edge, so the computations from all quadrants can be done with a single set of equations
         
         // temporary objects
@@ -611,72 +636,73 @@ double Landscape::compute_local_density(const Individual* focal_individual) cons
         vector<double>section_y;
         
         // Functions for adjusted local density calculation, according to the specific case
-        // Case 1)
-        if(abs_x > half_world_size - radius && abs_y <= half_world_size - radius) // Checks if the x coordinate is within a radius distance from the edge AND if the y coordinate is not
+        // Case 1) - Individual near vertical edge (left/right boundary)
+        if(abs_x > half_width - radius && abs_y <= half_height - radius) // Checks if the x coordinate is within a radius distance from the edge AND if the y coordinate is not
         {
-          section_x.push_back(half_world_size);
-          section_x.push_back(half_world_size);
-          section_y.push_back(abs_y + sqrt(radius * radius - ((half_world_size - abs_x) * (half_world_size - abs_x))));
-          section_y.push_back(abs_y - sqrt(radius * radius - ((half_world_size - abs_x) * (half_world_size - abs_x))));
+          section_x.push_back(half_width);
+          section_x.push_back(half_width);
+          section_y.push_back(abs_y + sqrt(radius * radius - ((half_width - abs_x) * (half_width - abs_x))));
+          section_y.push_back(abs_y - sqrt(radius * radius - ((half_width - abs_x) * (half_width - abs_x))));
           
           double distance_sections = section_y[0] - section_y[1];
-          double height = half_world_size - abs_x;
+          double height = half_width - abs_x;
           double theta = acos(1 - (distance_sections * distance_sections / (2 * radius * radius))); // angle in radians
           double adjusted_area = M_PI * radius * radius - (theta * radius * radius / 2 - (distance_sections * height / 2));
           
           density = focal_individual->neighborhood_size() / adjusted_area;
         }
         
-        // Case 2)
-        if(abs_x <= half_world_size - radius && abs_y > half_world_size - radius) // Checks if the y coordinate is within a radius distance from the edge AND if the x coordinate is not
+        // Case 2) - Individual near horizontal edge (top/bottom boundary)
+        if(abs_x <= half_width - radius && abs_y > half_height - radius) // Checks if the y coordinate is within a radius distance from the edge AND if the x coordinate is not
         {
-          section_y.push_back(half_world_size);
-          section_y.push_back(half_world_size);
-          section_x.push_back(abs_x + sqrt(radius * radius - ((half_world_size - abs_y) * (half_world_size - abs_y))));
-          section_x.push_back(abs_x - sqrt(radius * radius - ((half_world_size - abs_y) * (half_world_size - abs_y))));
+          section_y.push_back(half_height);
+          section_y.push_back(half_height);
+          section_x.push_back(abs_x + sqrt(radius * radius - ((half_height - abs_y) * (half_height - abs_y))));
+          section_x.push_back(abs_x - sqrt(radius * radius - ((half_height - abs_y) * (half_height - abs_y))));
           
           double distance_sections = section_x[0] - section_x[1];
-          double height = half_world_size - abs_y;
+          double height = half_height - abs_y;
           double theta = acos(1 - (distance_sections * distance_sections / (2 * radius * radius))); // angle in radians
           double adjusted_area = M_PI * radius * radius - (theta * radius * radius / 2 - (distance_sections * height / 2));
           
           density = focal_individual->neighborhood_size() / adjusted_area;
         }
         
-        if(abs_x > half_world_size - radius && abs_y > half_world_size - radius)
+        // Case 3) & 4) - Individual near corner
+        if(abs_x > half_width - radius && abs_y > half_height - radius)
         {
           
-          // Case 3)
-          if((abs_x - half_world_size) * (abs_x - half_world_size) + (abs_y - half_world_size) * (abs_y - half_world_size) > radius * radius)
+          // Case 3) - Individual far from corner
+          if((abs_x - half_width) * (abs_x - half_width) + (abs_y - half_height) * (abs_y - half_height) > radius * radius)
           {
-            section_x.push_back(abs_x + sqrt(radius * radius - ((half_world_size - abs_y) * (half_world_size - abs_y))));
-            section_y.push_back(half_world_size);
-            section_x.push_back(abs_x - sqrt(radius * radius - ((half_world_size - abs_y) * (half_world_size - abs_y))));
-            section_y.push_back(half_world_size);
-            section_x.push_back(half_world_size);
-            section_y.push_back(abs_y + sqrt(radius * radius - ((half_world_size - abs_x) * (half_world_size - abs_x))));
-            section_x.push_back(half_world_size);
-            section_y.push_back(abs_y - sqrt(radius * radius - ((half_world_size - abs_x) * (half_world_size - abs_x))));
+            section_x.push_back(abs_x + sqrt(radius * radius - ((half_height - abs_y) * (half_height - abs_y))));
+            section_y.push_back(half_height);
+            section_x.push_back(abs_x - sqrt(radius * radius - ((half_height - abs_y) * (half_height - abs_y))));
+            section_y.push_back(half_height);
+            section_x.push_back(half_width);
+            section_y.push_back(abs_y + sqrt(radius * radius - ((half_width - abs_x) * (half_width - abs_x))));
+            section_x.push_back(half_width);
+            section_y.push_back(abs_y - sqrt(radius * radius - ((half_width - abs_x) * (half_width - abs_x))));
             
             double distance_sections = sqrt((section_x[3] - section_x[1]) * (section_x[3] - section_x[1]) + (section_y[1] - section_y[3]) * (section_y[1] - section_y[3]));
             double distance_sections2 = sqrt((section_x[2] - section_x[0]) * (section_x[2] - section_x[0]) + (section_y[0] - section_y[2]) * (section_y[0] - section_y[2]));
             double theta = acos(1 - (distance_sections * distance_sections / (2 * radius * radius))); // angle in radians
             double phi = acos(1 - (distance_sections2 * distance_sections2 / (2 * radius * radius))); // angle in radians
-            double adjusted_area = (2 * M_PI - theta) * radius * radius / 2 + phi * radius * radius / 2 + (section_x[0] - section_x[1]) * (half_world_size - abs_y) / 2 + (section_y[2] - section_y[3]) * (half_world_size - abs_x) / 2;
+            double adjusted_area = (2 * M_PI - theta) * radius * radius / 2 + phi * radius * radius / 2 + (section_x[0] - section_x[1]) * (half_height - abs_y) / 2 + (section_y[2] - section_y[3]) * (half_width - abs_x) / 2;
             
             density = focal_individual->neighborhood_size() / adjusted_area;
           }
-          // Case 4)
+          // Case 4) - Individual close to corner
           else
           {
-            section_x.push_back(abs_x - sqrt(radius * radius - ((half_world_size - abs_y) * (half_world_size - abs_y))));
-            section_y.push_back(half_world_size);
-            section_x.push_back(half_world_size);
-            section_y.push_back(abs_y - sqrt(radius * radius - ((half_world_size - abs_x) * (half_world_size - abs_x))));
+            section_x.push_back(abs_x - sqrt(radius * radius - ((half_height - abs_y) * (half_height - abs_y))));
+            section_y.push_back(half_height);
+            section_x.push_back(half_width);
+            section_y.push_back(abs_y - sqrt(radius * radius - ((half_width - abs_x) * (half_width - abs_x))));
             
             double distance_sections = sqrt((section_x[1] - section_x[0]) * (section_x[1] - section_x[0]) + (section_y[0] - section_y[1]) * (section_y[0] - section_y[1]));
             double theta = acos(1 - (distance_sections * distance_sections / (2 * radius * radius))); // angle in radians
-            double adjusted_area = theta * radius * radius / 2 + (half_world_size - section_x[0]) * (half_world_size - abs_y) + (half_world_size - section_y[1]) * (half_world_size - abs_x);
+            double adjusted_area = theta * radius * radius / 2 + (half_width - section_x[0]) * (half_height - abs_y) + (half_height - section_y[1]) * (half_width - abs_x);
             
             density = focal_individual->neighborhood_size() / adjusted_area;
           }
@@ -688,7 +714,7 @@ double Landscape::compute_local_density(const Individual* focal_individual) cons
   return density; // Returns the individual's current density
 }
 
-// FIXED INDEX ORDER: Safe movement function with proper container usage - Function that decides upon, and calls other functions to perform, the desired method of dispersion (Random walk or habitat selection). In the habitat selection case this function also samples x Points within the individual's step_length radius and the individual's relative fitness on that location.
+// FIXED: Safe movement function with proper container usage - updated for rectangular boundaries
 bool Landscape::perform_movement(int individual_index){
   
   if (individual_index < 0 || individual_index >= static_cast<int>(population.size())) {
@@ -697,6 +723,8 @@ bool Landscape::perform_movement(int individual_index){
   
   bool left_boundary = false; // Initializes boolean variable that marks if the individual emigrated
   Individual* individual = population[individual_index].get();
+  double half_width = world_width / 2;
+  double half_height = world_height / 2;
   
   if(individual->get_sampling_points() > 0) // Checks if the individual samples their step radius
   {
@@ -719,12 +747,12 @@ bool Landscape::perform_movement(int individual_index){
       
       switch(boundary_condition){ // switches between boundary conditions (0= absorption, 1= periodic (pacman), 2= reflective)
       
-      case 0: // 0= absorption
+      case 0: // 0= absorption - updated for rectangular boundaries
         
-        if(candidate_locations[i][0] < -world_side_length/2 || //Checks if the x coordinate is higher than the maximum value OR
-           candidate_locations[i][0] >= world_side_length/2 || // if the x coordinate is lower than the minimum value OR
-           candidate_locations[i][1] < -world_side_length/2 || // if the y coordinate is higher than the maximum value Or
-           candidate_locations[i][1] >= world_side_length/2) // if the x coordinate is lower than the minimum value
+        if(candidate_locations[i][0] < -half_width || //Checks if the x coordinate is lower than the minimum value OR
+           candidate_locations[i][0] >= half_width || // if the x coordinate is higher than the maximum value OR
+           candidate_locations[i][1] < -half_height || // if the y coordinate is lower than the minimum value Or
+           candidate_locations[i][1] >= half_height) // if the y coordinate is higher than the maximum value
         {
           
           candidate_locations[i][2] = -10000; // Sets the out of boundaries locations rank to a very small number
@@ -734,18 +762,18 @@ bool Landscape::perform_movement(int individual_index){
         }
         // Fall through to get habitat value if within bounds
         
-      case 1: // 1= periodic (pacman)
-        if(candidate_locations[i][0] < -world_side_length/2) //Checks if the x coordinate is higher than the maximum value OR
-          candidate_locations[i][0] = (world_side_length + candidate_locations[i][0]); // Transports coordinate to the other edge
-        if(candidate_locations[i][0] >= world_side_length/2) // if the x coordinate is lower than the minimum value OR
-          candidate_locations[i][0] = (candidate_locations[i][0] - world_side_length); // Transports coordinate to the other edge
-        if(candidate_locations[i][1] < -world_side_length/2)// if the y coordinate is higher than the maximum value Or
-          candidate_locations[i][1] = (world_side_length + candidate_locations[i][1]); // Transports coordinate to the other edge
-        if(candidate_locations[i][1] >= world_side_length/2 ) // if the x coordinate is lower than the minimum value
-          candidate_locations[i][1] = (candidate_locations[i][1] - world_side_length); // Transports coordinate to the other edge
+      case 1: // 1= periodic (pacman) - updated for rectangular boundaries
+        if(candidate_locations[i][0] < -half_width) //Checks if the x coordinate is lower than the minimum value
+          candidate_locations[i][0] = (world_width + candidate_locations[i][0]); // Transports coordinate to the other edge
+        if(candidate_locations[i][0] >= half_width) // if the x coordinate is higher than the maximum value
+          candidate_locations[i][0] = (candidate_locations[i][0] - world_width); // Transports coordinate to the other edge
+        if(candidate_locations[i][1] < -half_height)// if the y coordinate is lower than the minimum value
+          candidate_locations[i][1] = (world_height + candidate_locations[i][1]); // Transports coordinate to the other edge
+        if(candidate_locations[i][1] >= half_height ) // if the y coordinate is higher than the maximum value
+          candidate_locations[i][1] = (candidate_locations[i][1] - world_height); // Transports coordinate to the other edge
         
-        grid_x = static_cast<int>(candidate_locations[i][0] / cell_size + cells_per_side / 2); // Discovers the x pixel index of the coordinate (column)
-        grid_y = static_cast<int>((-candidate_locations[i][1] / cell_size) + cells_per_side / 2); // Discovers the y pixel index of the coordinate (row)
+        grid_x = static_cast<int>(candidate_locations[i][0] / cell_size + cells_per_col / 2); // Discovers the x pixel index of the coordinate (column)
+        grid_y = static_cast<int>((-candidate_locations[i][1] / cell_size) + cells_per_row / 2); // Discovers the y pixel index of the coordinate (row)
         
         if (is_valid_grid_position(grid_x, grid_y)) {
           candidate_locations[i][2] = habitat_grid[grid_y][grid_x]; // FIXED: [row][col] = [grid_y][grid_x]
@@ -755,12 +783,12 @@ bool Landscape::perform_movement(int individual_index){
         
         break;
         
-      case 2:// 2= reflective
+      case 2:// 2= reflective - updated for rectangular boundaries
         // Prevents out of boundary coordinates from being sampled
-        while (candidate_locations[i][0] < -world_side_length/2 || //Checks if the x coordinate is higher than the maximum value OR
-               candidate_locations[i][0] >= world_side_length/2 || // if the x coordinate is lower than the minimum value OR
-               candidate_locations[i][1] < -world_side_length/2 || // if the y coordinate is higher than the maximum value Or
-               candidate_locations[i][1] >= world_side_length/2) { // if the x coordinate is lower than the minimum value
+        while (candidate_locations[i][0] < -half_width || //Checks if the x coordinate is lower than the minimum value OR
+               candidate_locations[i][0] >= half_width || // if the x coordinate is higher than the maximum value OR
+               candidate_locations[i][1] < -half_height || // if the y coordinate is lower than the minimum value Or
+               candidate_locations[i][1] >= half_height) { // if the y coordinate is higher than the maximum value
           
           sampled_angle = runif(0.0, 2.0 * M_PI); // Samples an angle directly in radians
           sampled_distance = runif(0.0, individual->get_step_length()); // re-Samples a distance
@@ -768,8 +796,8 @@ bool Landscape::perform_movement(int individual_index){
           candidate_locations[i][0] = individual->get_x_coordinate() + cos(sampled_angle) * sampled_distance;// Stores the possible x
           candidate_locations[i][1] = individual->get_y_coordinate() + sin(sampled_angle) * sampled_distance;// Stores the possible y
         }
-        grid_x = static_cast<int>(candidate_locations[i][0] / cell_size + cells_per_side / 2); // Discovers the x pixel index of the coordinate (column)
-        grid_y = static_cast<int>((-candidate_locations[i][1] / cell_size) + cells_per_side / 2); // Discovers the y pixel index of the coordinate (row)
+        grid_x = static_cast<int>(candidate_locations[i][0] / cell_size + cells_per_col / 2); // Discovers the x pixel index of the coordinate (column)
+        grid_y = static_cast<int>((-candidate_locations[i][1] / cell_size) + cells_per_row / 2); // Discovers the y pixel index of the coordinate (row)
         
         if (is_valid_grid_position(grid_x, grid_y)) {
           candidate_locations[i][2] = habitat_grid[grid_y][grid_x]; // FIXED: [row][col] = [grid_y][grid_x]

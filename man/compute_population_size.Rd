@@ -7,73 +7,23 @@
 compute_population_size(result)
 }
 \arguments{
-\item{result}{Result object from \code{\link{twolife_simulation}}}
+\item{result}{Result object from twolife_simulation}
 }
 \value{
 Data frame with columns:
-  \describe{
-    \item{\code{time}}{Simulation time points}
-    \item{\code{population_size}}{Number of individuals at each time point}
+  \itemize{
+    \item \code{time}: Event times
+    \item \code{population_size}: Cumulative population size
   }
 }
 \description{
-Extract and compute population size changes throughout a TWoLife simulation.
-This function processes the event history to create a time series of 
-population size, useful for analyzing population dynamics and persistence.
-}
-\details{
-This function reconstructs the population trajectory by processing all
-demographic events (births, deaths, dispersal, emigration) in chronological
-order. The resulting trajectory shows how population size changed over
-the course of the simulation.
-
-Event types processed:
-\describe{
-  \item{-1}{Initial placement (+1 individual)}
-  \item{0}{Death (-1 individual)} 
-  \item{1}{Birth (+1 individual)}
-  \item{2}{Dispersal (no change in population)}
-  \item{3}{Emigration (-1 individual)}
-}
+Computes population size at each event time from simulation results.
 }
 \examples{
-# Run simulation
-habitat <- create_fractal_landscape(8, fractality = 0.5, habitat_proportion = 0.3)
-result <- twolife_simulation(
-  landscape_params = list(habitat = habitat),
-  individual_params = list(initial_population_size = 15),
-  simulation_params = list(max_events = 100)
-)
-
-# Extract trajectory
+\dontrun{
+result <- twolife_simulation(...)
 trajectory <- compute_population_size(result)
-head(trajectory)
-
-# Plot population over time
-plot(trajectory$time, trajectory$population_size, 
-     type = "l", main = "Population Trajectory",
-     xlab = "Time", ylab = "Population Size")
-
-\donttest{
-# Analyze trajectory characteristics
-max_pop <- max(trajectory$population_size)
-final_pop <- tail(trajectory$population_size, 1)
-mean_pop <- mean(trajectory$population_size)
-
-cat("Peak population:", max_pop, "\n")
-cat("Final population:", final_pop, "\n")
-cat("Mean population:", round(mean_pop, 1), "\n")
-
-# Check for population crashes
-min_pop <- min(trajectory$population_size)
-if (min_pop == 0) {
-  extinction_time <- trajectory$time[trajectory$population_size == 0][1]
-  cat("Population went extinct at time:", extinction_time, "\n")
-}
+plot(trajectory$time, trajectory$population_size, type = "l")
 }
 
-}
-\seealso{
-\code{\link{twolife_simulation}} for generating simulation results,
-\code{\link{plot_simulation_on_landscape}} for spatial visualization
 }

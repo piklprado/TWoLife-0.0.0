@@ -44,8 +44,6 @@ private:
   double neighbor_radius;
   /** The basal birth rate (The rate at which individuals give birth on a habitat patch without neighbours)*/
   const double base_birth_rate;
-  /** Seed for generating random numbers for the individual */
-  const int random_seed;
   /** The slope of the birth density dependence function*/
   const double birth_density_slope;
   /** The slope of the death density dependence function */
@@ -60,6 +58,8 @@ private:
   const double mutation_rate;
   /** The plasticity for phenotypic variation from genotype */
   const double plasticity;
+  /** Temperature parameter for softmax habitat selection (controls selectivity) */
+  const double habitat_selection_temperature;
   /** The number of sampling coordinates drafted at each dispersal event */
   const int sampling_points;
   /** Final/current birth rate of the individual (all effects considered) */
@@ -114,8 +114,6 @@ public:
     const double neighbor_radius,
     /** The basal birth rate (The rate at which individuals give birth on a habitat patch without neighbours) */
     const double base_birth_rate,
-    /** Seed for generating random numbers for the individual */
-    const int random_seed,
     /** The slope of the birth density dependence function */
     const double birth_density_slope,
     /** The slope of the death density dependence function */
@@ -135,7 +133,9 @@ public:
     /** FIXED: Safe genetic parameters using const references - The standard deviation of environmental usage by an individual, how generalist it is*/
     const vector<double>& genotype_sds,
     /** The number of sampling coordinates drafted at each dispersal event */
-    int sampling_points
+    int sampling_points,
+    /** Temperature parameter for softmax habitat selection; lower = more selective, higher = more random */
+    double habitat_selection_temperature = 1.0
   );
   
   /** Copy constructor, used for generating new individuals by asexual reproduction
@@ -214,6 +214,22 @@ public:
     return genotype_means[0];
   }
   
+  /** FIXED: Safe phenotype access with validation - Function that returns the environmental optimum (phenotype) of the individual */
+  const double get_environmental_optimum() const {
+    if (environmental_optimum.empty()) {
+      throw runtime_error("No environmental optimum available");
+    }
+    return environmental_optimum[0];
+  }
+  
+  /** FIXED: Safe genotype SD access with validation - Function that returns the genotype standard deviation (niche width) of the individual */
+  const double get_genotype_sd() const {
+    if (genotype_sds.empty()) {
+      throw runtime_error("No genotype sds available");
+    }
+    return genotype_sds[0];
+  }
+  
   // Other Public Methods
   /** Function that Returns the drafted time for executing an action by the individual based on its birth, death and dispersal rates. */
   const double get_time_to_next_event() const {return time_to_next_event;}
@@ -241,7 +257,7 @@ public:
    @param sd_values vector containing the Standard deviations of the distribution*/
   double sum_normal_densities(double x, const vector<double>& mean_values, const vector<double>& sd_values) const;
   
-  /** FIXED: Safe habitat selection with proper container - Function that selects from within a given set of coordinates based on the dispersing individual's preference ranks via a softmax function
+  /** FIXED: Safe habitat selection with proper container - Function that selects from within a given set of coordinates based on the dispersing individual's preference ranks via a softmax function with configurable temperature
    @param candidate_locations Vector containing X and Y coordinates (first two cols), and the environmental values of that coordinate's pixel (third col) */
   void select_habitat(const vector<vector<double>>& candidate_locations);
   

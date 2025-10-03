@@ -19,28 +19,29 @@ plot_landscape_world_coords(
 
 \item{cell_size}{Numeric. Size of each cell (default: 1.0)}
 
-\item{filename}{Character. File path for export (optional)}
+\item{filename}{Character. File path for export (currently unused)}
 
-\item{main}{Character. Plot title}
+\item{main}{Character. Plot title (default: "Landscape (World Coordinates)")}
 
-\item{colors}{Character. Color scheme: "terrain", "viridis", "plasma", "habitat", "quality", "binary"}
+\item{colors}{Character. Color scheme: "habitat" (green tones), "terrain",
+or "viridis" (default: "habitat")}
 
-\item{show_legend}{Logical. Whether to show color scale legend}
+\item{show_legend}{Logical. Show color scale legend (default: TRUE, currently unused)}
 
-\item{add_grid}{Logical. Whether to add grid lines and reference axes}
+\item{add_grid}{Logical. Add grid lines and axes (default: TRUE)}
 }
 \value{
-Invisibly returns filename if saved, NULL otherwise
+Invisibly returns NULL
 }
 \description{
-Enhanced landscape plotting that uses world coordinates matching the C++ simulation
-and applies consistent matrix transformation for proper orientation.
+Visualizes landscape in world coordinate system with proper axis scaling.
+Works with both square and rectangular landscapes.
 }
 \examples{
-habitat <- create_fractal_landscape(20, fractality = 0.6, habitat_proportion = 0.4)
-plot_landscape_world_coords(habitat, cell_size = 1.0, colors = "habitat")
-
+\dontrun{
+landscape <- create_fractal_landscape(50, 50, fractality = 0.5,
+                                     habitat_proportion = 0.3)
+plot_landscape_world_coords(landscape)
 }
-\seealso{
-\code{\link{plot_simulation_on_landscape}} for overlaying simulation results
+
 }

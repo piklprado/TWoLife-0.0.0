@@ -9,131 +9,93 @@ twolife_simulation(
   individual_params = list(),
   genetic_params = list(),
   simulation_params = list(),
+  master_seed = NULL,
   ...,
   output_file = NULL
 )
 }
 \arguments{
 \item{landscape_params}{List containing landscape parameters:
-\describe{
-  \item{\code{habitat}}{Square matrix of habitat quality values (required)}
-  \item{\code{cell_size}}{Size of each cell in world units (default: 1.0)}
-  \item{\code{boundary_condition}}{Edge behavior: 0=absorbing, 1=periodic, 2=reflective (default: 1)}
-  \item{\code{density_type}}{Density dependence: 0=global, 1=local (default: 1)}
-  \item{\code{matrix_mortality_multiplier}}{Death rate multiplier in matrix habitat (default: 2.0)}
-  \item{\code{matrix_dispersal_multiplier}}{Movement rate multiplier in matrix habitat (default: 0.5)}
+\itemize{
+  \item \code{habitat}: Required matrix of habitat values
+  \item \code{cell_size}: Size of each cell (default: 1.0)
+  \item \code{boundary_condition}: 1=reflecting, 2=periodic (default: 1)
+  \item \code{density_type}: 1=local, 2=global (default: 1)
+  \item \code{matrix_mortality_multiplier}: Mortality multiplier in matrix (default: 2.0)
+  \item \code{matrix_dispersal_multiplier}: Dispersal multiplier in matrix (default: 0.5)
 }}
 
 \item{individual_params}{List containing individual parameters:
-\describe{
-  \item{\code{initial_population_size}}{Starting number of individuals (default: 200)}
-  \item{\code{neighbor_radius}}{Radius for density interactions (default: 2.0)}
-  \item{\code{vision_angle}}{Angular range sampled during random walk in radians (default: pi)}
-  \item{\code{step_length}}{Maximum distance moved per dispersal event (default: 1.0)}
-  \item{\code{base_dispersal_rate}}{Base rate of movement events (default: 0.1)}
-  \item{\code{base_birth_rate}}{Base rate of reproduction (default: 0.3)}
-  \item{\code{base_mortality_rate}}{Base rate of death (default: 0.2)}
-  \item{\code{birth_density_slope}}{Density effect on birth rate (default: 0.02)}
-  \item{\code{mortality_density_slope}}{Density effect on death rate (default: 0.02)}
+\itemize{
+  \item \code{neighbor_radius}: Radius for local density (default: 2.0)
+  \item \code{vision_angle}: Angle of vision in radians (default: pi)
+  \item \code{step_length}: Movement distance per step (default: 1.0)
+  \item \code{base_dispersal_rate}: Base dispersal probability (default: 0.1)
+  \item \code{base_birth_rate}: Base birth probability (default: 0.3)
+  \item \code{base_mortality_rate}: Base mortality probability (default: 0.20)
+  \item \code{birth_density_slope}: Birth rate density dependence (default: 0.02)
+  \item \code{mortality_density_slope}: Mortality rate density dependence (default: 0.02)
+  \item \code{initial_population_size}: Starting population (default: 200)
+  \item \code{initial_placement_mode}: 1=random in habitat, 2=random anywhere, 3=custom coordinates (default: 1)
+  \item \code{initial_x_coordinates}: X coordinates for mode 3 (optional)
+  \item \code{initial_y_coordinates}: Y coordinates for mode 3 (optional)
 }}
 
 \item{genetic_params}{List containing genetic parameters:
-\describe{
-  \item{\code{genotype_means}}{Optimal habitat values for each individual (default: all 1.0)}
-  \item{\code{genotype_sds}}{Niche width (habitat tolerance) for each individual (default: all 0.0)}
-  \item{\code{mutation_rates}}{Mutation rate per generation for each individual (default: all 0.0)}
-  \item{\code{plasticities}}{Phenotypic flexibility for each individual (default: all 0.0)}
-  \item{\code{sampling_points}}{Number of locations sampled for habitat selection (default: all 0 = random walk)}
+\itemize{
+  \item \code{genotype_means}: Mean genotype values (length 1 or population_size)
+  \item \code{genotype_sds}: Standard deviations of genotypes (length 1 or population_size)
+  \item \code{mutation_rates}: Mutation rates (length 1 or population_size)
+  \item \code{plasticities}: Phenotypic plasticity values (length 1 or population_size)
+  \item \code{sampling_points}: Number of sampling points for habitat selection (length 1 or population_size)
+  \item \code{habitat_selection_temperatures}: Temperature parameter for habitat selection softmax (length 1 or population_size, must be positive)
 }}
 
 \item{simulation_params}{List containing simulation control parameters:
-\describe{
-  \item{\code{max_events}}{Maximum number of demographic events (auto-calculated if NULL)}
-  \item{\code{neutral_mode}}{All individuals act with fitness of the average initial population (default: FALSE)}
+\itemize{
+  \item \code{max_events}: Maximum number of events (default: 50 * population_size)
+  \item \code{neutral_mode}: Disable selection if TRUE (default: FALSE)
 }}
 
-\item{...}{Additional named arguments (deprecated - use parameter lists instead)}
+\item{master_seed}{Integer seed for reproducible simulations (optional)}
 
-\item{output_file}{Optional file path for detailed event output (advanced usage)}
+\item{...}{Additional named arguments (deprecated)}
+
+\item{output_file}{Optional file path for detailed event output}
 }
 \value{
 A list of class 'twolife_result' containing:
-  \describe{
-    \item{\code{summary}}{List with final_population_size, total_events, duration, status}
-    \item{\code{survivors}}{Data frame with id, x, y, genotype for surviving individuals}
-    \item{\code{spatial}}{List with world_size and num_patches}
-    \item{\code{events}}{List with complete event history (times, types, coordinates, genotypes)}
-    \item{\code{parameters}}{All parameters used in the simulation}
+  \itemize{
+    \item \code{summary}: Summary statistics (final_population_size, total_events, duration, status)
+    \item \code{survivors}: Data frame of surviving individuals with id, x, y, genotype
+    \item \code{spatial}: Spatial dimensions (world_width, world_height, num_patches)
+    \item \code{events}: Event history (times, types, individual_ids, patch_ids, coordinates, genotypes)
+    \item \code{parameters}: All input parameters organized by category
   }
 }
 \description{
-Execute a spatially-explicit individual-based population simulation where organisms
-move, reproduce, and die across heterogeneous landscapes. Supports genetic evolution,
-habitat selection behavior, and density-dependent demography.
+Runs a spatially-explicit individual-based simulation with habitat selection,
+genetic variation, and demographic processes. Supports rectangular landscapes
+and customizable habitat selection parameters.
 }
-\details{
-TWoLife simulates individual-based population dynamics where each organism has:
-\itemize{
-  \item Spatial location with movement behavior
-  \item Genetic traits determining habitat preferences  
-  \item Demographic rates affected by local density
-  \item Optional behavioral habitat selection
-}
-
-The simulation proceeds as a continuous-time Markov process where individuals
-experience birth, death, or dispersal events with rates determined by their
-genetic traits, local environment, and nearby population density.
-}
-\section{Parameter Guidelines}{
-
-\itemize{
-  \item Ensure \code{base_birth_rate > base_mortality_rate} for population viability
-  \item Use \code{step_length <= neighbor_radius} for realistic spatial interactions  
-  \item Set \code{sampling_points > 0} to enable habitat selection behavior
-  \item Match genetic parameter vector lengths to \code{initial_population_size}
-}
-}
-
 \examples{
-# Basic simulation with default parameters
-habitat <- create_fractal_landscape(8, fractality = 0.6, habitat_proportion = 0.4)
+\dontrun{
+# Create a simple landscape
+landscape <- create_fractal_landscape(50, 50, fractality = 0.5, 
+                                     habitat_proportion = 0.3,
+                                     return_as_landscape_params = TRUE)
+
+# Run simulation
 result <- twolife_simulation(
-  landscape_params = list(habitat = habitat),
-  individual_params = list(initial_population_size = 10),
-  simulation_params = list(max_events = 50)
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 100),
+  genetic_params = list(genotype_means = 0.5, genotype_sds = 0.1),
+  master_seed = 42
 )
+
+# View results
 print(result)
-
-\donttest{
-# Advanced simulation with genetic evolution
-result_genetic <- twolife_simulation(
-  landscape_params = list(
-    habitat = habitat,
-    boundary_condition = 1,  # Periodic boundaries
-    density_type = 1         # Local density dependence
-  ),
-  individual_params = list(
-    initial_population_size = 20,
-    base_birth_rate = 0.35,
-    base_mortality_rate = 0.25
-  ),
-  genetic_params = list(
-    genotype_means = runif(20, 0.3, 0.7),    # Diverse starting genotypes
-    genotype_sds = rep(0.15, 20),            # Moderate specialists
-    mutation_rates = rep(0.03, 20),          # Moderate evolution
-    plasticities = rep(0.02, 20),            # Low plasticity
-    sampling_points = rep(5, 20)             # Habitat selection
-  ),
-  simulation_params = list(max_events = 200)
-)
-
-# Visualize results
-plot_simulation_on_landscape(result_genetic)
+plot_simulation_on_landscape(result)
 }
 
-}
-\seealso{
-\code{\link{create_fractal_landscape}} for landscape generation,
-\code{\link{plot_simulation_on_landscape}} for result visualization,
-\code{\link{compute_population_size}} for trajectory analysis
 }

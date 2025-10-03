@@ -16,7 +16,7 @@ using namespace Rcpp;
  //' @param base_mortality_rate Basal death rate
  //' @param birth_density_slope Slope of birth density dependence
  //' @param mortality_density_slope Slope of death density dependence
- //' @param habitat Square matrix of environmental values (0=matrix, 1=habitat)
+ //' @param habitat Rectangular matrix of environmental values (0=matrix, 1=habitat)
  //' @param cell_size Resolution length of pixel side
  //' @param density_type Density type (0=global, 1=local)
  //' @param matrix_mortality_multiplier Mortality multiplier for matrix
@@ -31,7 +31,9 @@ using namespace Rcpp;
  //' @param mutation_rates Mutation rates
  //' @param plasticities Plasticities
  //' @param sampling_points Number of sampling points
+ //' @param habitat_selection_temperatures Softmax temperatures for habitat selection
  //' @param neutral_mode Neutral simulation mode
+ //' @param master_seed Master seed for reproducible simulations
  //' @param output_file Optional output file path
  //' @return List containing simulation results
  //' @export
@@ -61,11 +63,21 @@ using namespace Rcpp;
      NumericVector mutation_rates,
      NumericVector plasticities,
      IntegerVector sampling_points,
+     NumericVector habitat_selection_temperatures,
      bool neutral_mode,
+     Nullable<int> master_seed = R_NilValue,
      Nullable<String> output_file = R_NilValue
  ) {
    
    try {
+     // Set the random seed if provided
+     if (master_seed.isNotNull()) {
+       int seed_value = as<int>(master_seed.get());
+       Rcpp::Environment base_env("package:base");
+       Rcpp::Function set_seed = base_env["set.seed"];
+       set_seed(seed_value);
+     }
+     
      // Convert Rcpp vectors to std::vectors
      std::vector<double> initial_x_vec = as<std::vector<double>>(initial_x_coordinates);
      std::vector<double> initial_y_vec = as<std::vector<double>>(initial_y_coordinates);
@@ -74,8 +86,9 @@ using namespace Rcpp;
      std::vector<double> mutation_rates_vec = as<std::vector<double>>(mutation_rates);
      std::vector<double> plasticities_vec = as<std::vector<double>>(plasticities);
      std::vector<int> sampling_points_vec = as<std::vector<int>>(sampling_points);
+     std::vector<double> habitat_selection_temperatures_vec = as<std::vector<double>>(habitat_selection_temperatures);
      
-     // Create landscape
+     // Create landscape - now supports rectangular landscapes
      auto world = std::make_unique<Landscape>(
        neighbor_radius, initial_population_size, vision_angle, step_length,
        base_dispersal_rate, base_birth_rate, base_mortality_rate,
@@ -84,7 +97,8 @@ using namespace Rcpp;
        matrix_dispersal_multiplier, initial_placement_mode,
        boundary_condition, initial_x_vec, initial_y_vec,
        genotype_means_vec, genotype_sds_vec, mutation_rates_vec,
-       plasticities_vec, sampling_points_vec, neutral_mode
+       plasticities_vec, sampling_points_vec, 
+       habitat_selection_temperatures_vec, neutral_mode
      );
      
      // Storage for simulation events
@@ -186,10 +200,12 @@ using namespace Rcpp;
        file_output->close();
      }
      
-     // Collect final survivors
+     // Collect final survivors - UPDATED to include phenotypes and widths
      NumericVector survivor_x(world->count_individuals());
      NumericVector survivor_y(world->count_individuals());
      NumericVector survivor_genotypes(world->count_individuals());
+     NumericVector survivor_phenotypes(world->count_individuals());
+     NumericVector survivor_widths(world->count_individuals());
      IntegerVector survivor_ids(world->count_individuals());
      
      for (size_t i = 0; i < world->count_individuals(); i++) {
@@ -197,14 +213,19 @@ using namespace Rcpp;
        survivor_x[i] = survivor->get_x_coordinate();
        survivor_y[i] = survivor->get_y_coordinate();
        survivor_genotypes[i] = survivor->get_genotype_mean();
+       survivor_phenotypes[i] = survivor->get_environmental_optimum();
+       survivor_widths[i] = survivor->get_genotype_sd();
        survivor_ids[i] = static_cast<int>(survivor->get_id());
      }
      
+     // Return results including rectangular landscape dimensions and phenotypes/widths
      return List::create(
        Named("final_population_size") = static_cast<int>(world->count_individuals()),
        Named("survivor_x") = survivor_x,
        Named("survivor_y") = survivor_y,
        Named("survivor_genotypes") = survivor_genotypes,
+       Named("survivor_phenotypes") = survivor_phenotypes,
+       Named("survivor_widths") = survivor_widths,
        Named("survivor_ids") = survivor_ids,
        Named("event_times") = NumericVector(event_times.begin(), event_times.end()),
        Named("event_types") = IntegerVector(event_types.begin(), event_types.end()),
@@ -213,6 +234,8 @@ using namespace Rcpp;
        Named("x_coordinates") = NumericVector(x_coordinates.begin(), x_coordinates.end()),
        Named("y_coordinates") = NumericVector(y_coordinates.begin(), y_coordinates.end()),
        Named("genotypes") = NumericVector(genotypes.begin(), genotypes.end()),
+       Named("world_width") = world->get_world_width(),
+       Named("world_height") = world->get_world_height(),
        Named("world_size") = world->get_world_size(),
        Named("num_patches") = world->get_num_patches()
      );

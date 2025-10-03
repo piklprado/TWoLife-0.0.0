@@ -9,16 +9,15 @@ quick_plot_result(simulation_result, ...)
 \arguments{
 \item{simulation_result}{A twolife_result object}
 
-\item{...}{Additional arguments passed to \code{\link{plot_simulation_on_landscape}}}
+\item{...}{Additional arguments passed to plot_simulation_on_landscape}
 }
 \description{
-Simplified function for quickly visualizing TWoLife simulation results.
+Convenience wrapper for plot_simulation_on_landscape with sensible defaults.
 }
 \examples{
-result <- twolife_simulation(...)  # your simulation
+\dontrun{
+result <- twolife_simulation(...)
 quick_plot_result(result)
-
 }
-\seealso{
-\code{\link{plot_simulation_on_landscape}} for full customization
+
 }

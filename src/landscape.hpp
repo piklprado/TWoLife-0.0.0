@@ -21,13 +21,17 @@ class Landscape
 {
 private:
   
-  // Private properties - REORDERED to match constructor initialization exactly
-  /** Length of a square landscape side */
-  const double world_side_length;
+  // Private properties - UPDATED for rectangular landscapes
+  /** Width of the landscape in world coordinates */
+  const double world_width;
+  /** Height of the landscape in world coordinates */
+  const double world_height;
   /** Number of individuals at the start of the simulation */
   const unsigned long initial_population_size;
-  /** Number of pixels in a square landscape side */
-  const int cells_per_side;
+  /** Number of rows in the landscape matrix */
+  const int cells_per_row;
+  /** Number of columns in the landscape matrix */
+  const int cells_per_col;
   /** Resolution Length of a square pixel side */
   const double cell_size;
   /** The boundary condition type affects how individuals interact with the edges of the landscape (0= absorbing, 1= periodic (pacman), 2= reflective) */
@@ -87,6 +91,8 @@ private:
       const vector<double>& plasticities,
       /** FIXED: Safe vector parameters - Vector containing the number of points initial individuals sample when selecting habitats */
       const vector<int>& sampling_points,
+      /** Vector containing the habitat selection temperatures of the initial individuals */
+      const vector<double>& habitat_selection_temperatures,
       /** Boolean value switching simulations to neutral state (all individuals acting as an average individual) */
       bool neutral_mode);
   
@@ -111,9 +117,9 @@ private:
    @param individual an object of the Individual class */
   bool apply_boundary_condition(Individual* individual);
   
-  /** FIXED: Helper function for safe grid access */
+  /** FIXED: Helper function for safe grid access - updated for rectangular grids */
   bool is_valid_grid_position(int x, int y) const {
-    return x >= 0 && x < cells_per_side && y >= 0 && y < cells_per_side;
+    return x >= 0 && x < cells_per_col && y >= 0 && y < cells_per_row;
   }
   
 public:
@@ -122,7 +128,7 @@ public:
   double world_time;
   
   //Public methods
-  /** FIXED: Constructor with safe parameter types - Constructor of the Landscape class */
+  /** FIXED: Constructor with safe parameter types - updated for rectangular landscapes */
   Landscape(
     /** Radius of density dependent influence */
     const double neighbor_radius,
@@ -142,7 +148,7 @@ public:
     const double birth_density_slope,
     /** The slope of the death density dependence function */
     const double mortality_density_slope,
-    /** Square habitat matrix containing environmental values (0= matrix, 1= habitat) */
+    /** Rectangular habitat matrix containing environmental values (0= matrix, 1= habitat) */
     const Rcpp::NumericMatrix& habitat,
     /** Resolution Length of a square pixel side*/
     const double cell_size,
@@ -170,6 +176,8 @@ public:
     const vector<double>& plasticities,
     /** FIXED: Safe vector parameters - Vector containing the number of points initial individuals sample when selecting habitats */
     const vector<int>& sampling_points,
+    /** Vector containing the habitat selection temperatures of the initial individuals */
+    const vector<double>& habitat_selection_temperatures,
     /** Boolean value switching simulations to neutral state */
     bool neutral_mode
   );
@@ -215,8 +223,14 @@ public:
    \ref TBI */
   const int count_species() const;
   
-  /** Function that returns the length of square landscape side */
-  const double get_world_size() const {return world_side_length;}
+  /** Function that returns the width of the landscape */
+  const double get_world_width() const {return world_width;}
+  
+  /** Function that returns the height of the landscape */
+  const double get_world_height() const {return world_height;}
+  
+  /** Function that returns the maximum dimension of the landscape (for backward compatibility) */
+  const double get_world_size() const {return max(world_width, world_height);}
   
   /** Function that returns the current world time */
   const double get_world_time() const {return world_time;}
@@ -237,8 +251,8 @@ public:
   }
   
   /** Recursive function used to find and identify which pixels belong to each of the landscape patches
-   @param x The initial value of the x coordinate
-   @param y The initial value of the y coordinate
+   @param x The initial value of the x coordinate (row index)
+   @param y The initial value of the y coordinate (column index)
    @param current_label The initial patch identification number */
   void identify_habitat_patches(int x, int y, int current_label);
   

@@ -15,10 +15,5 @@
 Invisibly returns the input object
 }
 \description{
-Custom print method for twolife_result objects.
-}
-\examples{
-result <- twolife_simulation(...)
-print(result)  # or just: result
-
+Print Method for TWoLife Results
 }

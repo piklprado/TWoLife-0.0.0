@@ -31,7 +31,6 @@ Individual::Individual(double x_coordinate,
                        double base_dispersal_rate,
                        double neighbor_radius,
                        double base_birth_rate,
-                       int random_seed, 
                        double birth_density_slope,
                        double mortality_density_slope,
                        double matrix_mortality_multiplier,
@@ -41,7 +40,8 @@ Individual::Individual(double x_coordinate,
                        double plasticity,
                        const vector<double>& genotype_means,
                        const vector<double>& genotype_sds,
-                       int sampling_points):
+                       int sampling_points,
+                       double habitat_selection_temperature):
   // Thread-safe ID assignment with overflow check - This section is similar to regular attribution and is run before brackets
   id(++MAX_ID),
   x_coordinate(x_coordinate),
@@ -55,7 +55,6 @@ Individual::Individual(double x_coordinate,
   current_dispersal_rate(base_dispersal_rate),
   neighbor_radius(neighbor_radius),
   base_birth_rate(base_birth_rate),
-  random_seed(random_seed),
   birth_density_slope(birth_density_slope),
   mortality_density_slope(mortality_density_slope),
   matrix_mortality_multiplier(matrix_mortality_multiplier),
@@ -63,6 +62,7 @@ Individual::Individual(double x_coordinate,
   density_type(density_type),
   mutation_rate(mutation_rate),
   plasticity(plasticity),
+  habitat_selection_temperature(habitat_selection_temperature),
   sampling_points(sampling_points),
   // Initialize other members - Consistent order
   current_birth_rate(0.0),
@@ -91,6 +91,9 @@ Individual::Individual(double x_coordinate,
   }
   if (sampling_points < 0) {
     throw invalid_argument("Sampling points cannot be negative");
+  }
+  if (habitat_selection_temperature <= 0) {
+    throw invalid_argument("Habitat selection temperature must be positive");
   }
   if (genotype_means.empty()) {
     throw invalid_argument("Genotype means vector cannot be empty");
@@ -165,7 +168,6 @@ Individual::Individual(const Individual& rhs)
   current_dispersal_rate(rhs.base_dispersal_rate),
   neighbor_radius(rhs.neighbor_radius),
   base_birth_rate(rhs.base_birth_rate),
-  random_seed(rhs.random_seed),
   birth_density_slope(rhs.birth_density_slope),
   mortality_density_slope(rhs.mortality_density_slope),
   matrix_mortality_multiplier(rhs.matrix_mortality_multiplier),
@@ -173,6 +175,7 @@ Individual::Individual(const Individual& rhs)
   density_type(rhs.density_type),
   mutation_rate(rhs.mutation_rate),
   plasticity(rhs.plasticity),
+  habitat_selection_temperature(rhs.habitat_selection_temperature),
   sampling_points(rhs.sampling_points),
   // Initialize in SAME ORDER as main constructor
   current_birth_rate(0.0),
@@ -369,8 +372,11 @@ void Individual::select_habitat(const vector<vector<double>>& candidate_location
     double env_value = candidate_locations[i][2];
     
     try {
-      // Calculate fitness based on environmental suitability
-      double fitness = exp(sum_normal_densities(env_value, environmental_optimum, genotype_sds)); // Attributes a score to the coordinate based on the probability density function of the migrating individual
+      // Calculate raw fitness based on environmental suitability
+      double raw_fitness = sum_normal_densities(env_value, environmental_optimum, genotype_sds);
+      
+      // Apply temperature to the fitness calculation
+      double fitness = exp(raw_fitness / habitat_selection_temperature);
       
       // Handle potential numerical issues
       if (!isfinite(fitness)) {
