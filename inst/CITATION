@@ -1,9 +1,15 @@
-citHeader("Para citar TWoLife em publicações use:")
-
-citEntry(entry = "Manual",
-         title = "TWoLife: Spatial Eco‑Evolutionary Simulation",
-         author = personList(as.person("Lucas De Freitas")),
-         year = "2025",
-         note = "R package version 0.0.1",
-         textVersion = "De Freitas, L. (0.0.1). TWoLife: Spatial Eco‑Evolutionary Simulation. R package."
+bibentry(
+  bibtype = "Manual",
+  title = "TWoLife: Individual-Based Spatial Population Simulations with Genetic Evolution",
+  author = c(person("Lucas", "Freitas")),
+  year = "2025",
+  note = "R package version 1.0.0",
+  url = "https://github.com/DeFreitasLR/TWoLife-0.0.0",
+  header = "To cite TWoLife in publications use:",
+  textVersion = paste(
+    "Freitas, L. (2025).",
+    "TWoLife: Individual-Based Spatial Population Simulations with Genetic Evolution.",
+    "R package version 1.0.0.",
+    "https://github.com/DeFreitasLR/TWoLife-0.0.0"
+  )
 )
