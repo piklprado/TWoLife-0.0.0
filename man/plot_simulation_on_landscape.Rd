@@ -17,28 +17,144 @@ plot_simulation_on_landscape(
 )
 }
 \arguments{
-\item{simulation_result}{A twolife_result object}
+\item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{point_size}{Numeric. Size of points (default: 2)}
+\item{point_size}{Numeric. Size of survivor points. Larger values make points more visible. Default: 2}
 
-\item{point_color}{Character. Color for points when color_by="none"}
+\item{point_color}{Character. Color for points when \code{color_by="none"}. 
+Any valid R color name or hex code. Default: "red"}
 
-\item{point_shape}{Integer. Point shape (default: 16)}
+\item{point_shape}{Integer. Point shape following R's pch codes (e.g., 16 = filled circle, 
+1 = open circle, 17 = filled triangle). Default: 16}
 
-\item{color_by}{Character. Color points by: "none", "genotype", or "phenotype"}
+\item{color_by}{Character. How to color survivor points:
+\itemize{
+  \item "none" - Single color specified by \code{point_color}
+  \item "genotype" - Color gradient based on genotype values (heat colors)
+  \item "phenotype" - Color gradient based on phenotype values (heat colors)
+}
+Default: "none"}
 
-\item{landscape_colors}{Character. Landscape color scheme}
+\item{landscape_colors}{Character. Color scheme for landscape:
+\itemize{
+  \item "habitat" - Green gradient for continuous, white/green for binary
+  \item "terrain" - Built-in terrain.colors palette
+  \item "viridis" - Viridis color scale (requires viridisLite package)
+}
+Default: "habitat"}
 
-\item{main}{Character. Plot title}
+\item{main}{Character. Plot title. If NULL, automatically generated. Default: NULL}
 
-\item{filename}{Optional. File path to save plot}
+\item{filename}{Character. Optional file path to save plot. If NULL, displays interactively. Default: NULL}
 
-\item{add_stats}{Logical. Add statistics to plot (default: TRUE)}
+\item{add_stats}{Logical. If TRUE, adds statistics text to plot (currently not implemented). Default: TRUE}
 }
 \value{
-simulation_result (invisibly)
+The input \code{simulation_result} object, invisibly. Allows for piping/chaining operations.
 }
 \description{
 Visualizes simulation results by overlaying survivor positions on the
 landscape. Points can be colored by genotype, phenotype, or a single color.
+Provides immediate visual feedback on spatial distribution and habitat selection.
+}
+\details{
+Coordinate System:
+  The function displays the landscape in world coordinates where:
+  \itemize{
+    \item Origin (0, 0) is at the center
+    \item Red crosshairs mark the origin
+    \item Grid lines aid spatial interpretation
+  }
+
+Color Mapping:
+  \itemize{
+    \item "none": All survivors shown in a single color (point_color)
+    \item "genotype": Heat gradient (red = low, yellow = high) shows genetic variation
+    \item "phenotype": Heat gradient shows expressed trait values (includes plasticity effects)
+  }
+  
+  When coloring by genotype/phenotype, visual clustering of similar colors in similar
+  habitats indicates successful habitat selection or local adaptation.
+
+Interpretation:
+  \itemize{
+    \item Survivors clustered in habitat (green/dark areas) = effective habitat preference
+    \item Match between point colors and background colors (when using "genotype" or "phenotype") 
+      = phenotype-environment matching (high fitness)
+    \item Scattered distribution = weak habitat selection or high dispersal
+    \item Survivors in matrix (white/light areas) = tolerance to poor habitat or recent dispersal
+  }
+}
+\examples{
+# Create fractal landscape
+landscape <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+# Run simulation
+result <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  simulation_params = list(max_events = 1500),
+  master_seed = 101
+)
+
+# Basic plot
+plot_simulation_on_landscape(result)
+
+# Customize appearance
+plot_simulation_on_landscape(
+  result,
+  point_size = 3,
+  point_color = "blue",
+  point_shape = 17,
+  main = "Final Population Distribution"
+)
+
+# Color by genotype with variation
+result_genetic <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  genetic_params = list(
+    genotype_means = runif(30, 0, 1),
+    genotype_sds = 0.1
+  ),
+  simulation_params = list(max_events = 1500),
+  master_seed = 202
+)
+
+plot_simulation_on_landscape(
+  result_genetic,
+  color_by = "genotype",
+  point_size = 2.5
+)
+
+\donttest{
+# Color by phenotype (requires plasticity)
+result_plastic <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 40),
+  genetic_params = list(
+    genotype_means = runif(40, 0, 1),
+    plasticities = 0.5,
+    sampling_points = 5
+  ),
+  simulation_params = list(max_events = 2000),
+  master_seed = 303
+)
+
+plot_simulation_on_landscape(
+  result_plastic,
+  color_by = "phenotype",
+  landscape_colors = "terrain"
+)
+}
+
+}
+\seealso{
+\code{\link{quick_plot_result}} for a convenience wrapper,
+  \code{\link{validate_habitat_matching}} for habitat-trait correlation plots
 }

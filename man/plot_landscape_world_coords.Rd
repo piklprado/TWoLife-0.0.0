@@ -15,24 +15,112 @@ plot_landscape_world_coords(
 )
 }
 \arguments{
-\item{landscape_data}{Either a matrix or list with habitat component}
+\item{landscape_data}{Either:
+\itemize{
+  \item A numeric matrix of habitat values
+  \item A list with a \code{$habitat} component (output from landscape creation functions)
+}}
 
-\item{cell_size}{Numeric. Size of each cell (default: 1.0)}
+\item{cell_size}{Numeric. Size of each landscape cell in world units. Should match
+the cell_size used in simulations. Default: 1.0}
 
-\item{filename}{Optional. File path to save plot}
+\item{filename}{Character. Optional file path to save plot (e.g., "landscape.png").
+If NULL, displays interactively. Default: NULL}
 
-\item{main}{Character. Plot title}
+\item{main}{Character. Plot title. Default: "Landscape (World Coordinates)"}
 
-\item{colors}{Character. Color scheme: "habitat", "terrain", or "viridis"}
+\item{colors}{Character. Color scheme:
+\itemize{
+  \item "habitat" - Green gradient (white=matrix, dark green=high quality habitat)
+  \item "terrain" - Built-in terrain.colors palette
+  \item "viridis" - Viridis color scale (requires viridisLite package)
+}
+Default: "habitat"}
 
-\item{show_legend}{Logical. Show color legend (default: TRUE)}
+\item{show_legend}{Logical. Whether to show color legend. Default: TRUE}
 
-\item{add_grid}{Logical. Add grid lines (default: TRUE)}
+\item{add_grid}{Logical. If TRUE, adds grid lines and crosshairs at origin. Default: TRUE}
 }
 \value{
-NULL (invisibly)
+NULL, invisibly. Function is called for its side effect (plotting).
 }
 \description{
-Visualizes landscape in world coordinate system with proper axis scaling.
-Works with both square and rectangular landscapes.
+Visualizes landscapes in the world coordinate system with proper axis scaling.
+Works with both square and rectangular landscapes. Shows the landscape as it
+appears in the simulation, centered at the origin with correct spatial scaling.
+}
+\details{
+The function displays landscapes in world coordinates where:
+\itemize{
+  \item Origin (0, 0) is at the center
+  \item X-axis ranges from -world_width/2 to +world_width/2
+  \item Y-axis ranges from -world_height/2 to +world_height/2
+  \item Red crosshairs mark the origin
+  \item Grid lines aid spatial interpretation
+}
+}
+\examples{
+# Example 1: Fractal landscape
+fractal <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.8,
+  habitat_proportion = 0.4
+)
+
+plot_landscape_world_coords(fractal, main = "Fractal Landscape")
+
+# Example 2: Binary landscape with custom colors
+binary <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  habitat_proportion = 0.3
+)
+
+plot_landscape_world_coords(
+  binary,
+  main = "Binary Landscape",
+  colors = "terrain"
+)
+
+# Example 3: Using output from landscape function
+landscape_list <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.6,
+  habitat_proportion = 0.5,
+  return_as_landscape_params = TRUE
+)
+
+plot_landscape_world_coords(landscape_list)
+
+# Example 4: Continuous landscape
+continuous <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  min_value = 0,
+  max_value = 1
+)
+
+plot_landscape_world_coords(
+  continuous,
+  main = "Continuous Habitat Quality",
+  colors = "viridis"
+)
+
+\donttest{
+# Example 5: Compare rectangular landscapes
+par(mfrow = c(1, 2))
+
+rect1 <- create_fractal_landscape(15, 20, 0.7, habitat_proportion = 0.4)
+plot_landscape_world_coords(rect1, main = "15 × 20")
+
+rect2 <- create_fractal_landscape(20, 15, 0.7, habitat_proportion = 0.4)
+plot_landscape_world_coords(rect2, main = "20 × 15")
+
+par(mfrow = c(1, 1))
+}
+
+}
+\seealso{
+\code{\link{plot_simulation_on_landscape}} to overlay simulation results,
+  \code{\link{create_fractal_landscape}} for landscape generation
 }

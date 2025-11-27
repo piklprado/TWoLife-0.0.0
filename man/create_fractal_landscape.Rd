@@ -15,30 +15,145 @@ create_fractal_landscape(
 )
 }
 \arguments{
-\item{cells_per_row}{Integer. Number of cells per row}
+\item{cells_per_row}{Integer. Number of cells per row. Must be positive. Typical values: 10-100.}
 
-\item{cells_per_col}{Integer. Number of cells per column. If NULL, creates square landscape.}
+\item{cells_per_col}{Integer. Number of cells per column. If NULL, creates square landscape 
+(cells_per_col = cells_per_row). Default: NULL}
 
-\item{fractality}{Numeric between 0 and 1. Higher values create more spatially
-autocorrelated (clumped) patterns. 0 = random, 1 = highly structured.}
+\item{fractality}{Numeric between 0 and 1. Controls spatial autocorrelation:
+\itemize{
+  \item 0 = completely random (no spatial structure)
+  \item 0.3-0.5 = moderate clumping
+  \item 0.7-0.9 = highly clumped/fragmented
+  \item 1 = maximum spatial structure
+}}
 
-\item{min_value}{Numeric. Minimum habitat value for continuous landscapes (default: 0.0)}
+\item{min_value}{Numeric. Minimum habitat value for continuous landscapes. Default: 0.0}
 
-\item{max_value}{Numeric. Maximum habitat value for continuous landscapes (default: 1.0)}
+\item{max_value}{Numeric. Maximum habitat value for continuous landscapes. Must be > min_value. Default: 1.0}
 
-\item{habitat_proportion}{Numeric between 0 and 1. If provided, creates binary
-landscape with this proportion of cells as habitat (value 1), rest as matrix
-(value 0). If NULL, creates continuous landscape.}
+\item{habitat_proportion}{Numeric between 0 and 1. If provided, creates binary landscape:
+\itemize{
+  \item Proportion of cells designated as habitat (value = 1)
+  \item Remaining cells are matrix (value = 0)
+  \item Uses fractality to determine spatial arrangement
+  \item If NULL, creates continuous landscape
+}
+Default: NULL}
 
-\item{return_as_landscape_params}{Logical. If TRUE, returns list(habitat=matrix)
-suitable for direct use in twolife_simulation. If FALSE, returns matrix only.}
+\item{return_as_landscape_params}{Logical. If TRUE, returns \code{list(habitat = matrix)}
+suitable for direct use in \code{twolife_simulation()}. If FALSE, returns matrix only. Default: FALSE}
 }
 \value{
-Either a matrix (if return_as_landscape_params=FALSE) or a list with
-  habitat component (if return_as_landscape_params=TRUE)
+If \code{return_as_landscape_params = FALSE}: A numeric matrix with dimensions 
+  \code{cells_per_row} × \code{cells_per_col}. Values are either continuous (between min_value 
+  and max_value) or binary (0 and 1).
+  
+  If \code{return_as_landscape_params = TRUE}: A list with one component:
+  \describe{
+    \item{habitat}{The generated landscape matrix}
+  }
 }
 \description{
-Generates a fractal landscape using spatial autocorrelation. Supports both
-square and rectangular landscapes, and can create either continuous or
-binary (habitat/matrix) landscapes.
+Generates a spatially autocorrelated landscape using fractal algorithms.
+Supports both square and rectangular landscapes, and can create either 
+continuous or binary (habitat/matrix) patterns. Useful for testing
+habitat selection and spatial processes.
+}
+\details{
+Algorithm:
+  The fractal generation uses iterative neighbor averaging:
+  \enumerate{
+    \item Start with random values at each cell
+    \item For each iteration (controlled by fractality):
+      \itemize{
+        \item Average each cell with its 8 neighbors
+        \item Add small random noise
+      }
+    \item More iterations (higher fractality) → more spatial clumping
+  }
+  
+  Number of smoothing iterations = round(fractality × 10). For example:
+  \itemize{
+    \item fractality = 0.0 → 0 iterations (completely random)
+    \item fractality = 0.5 → 5 iterations (moderate structure)
+    \item fractality = 0.9 → 9 iterations (highly clumped)
+  }
+
+Binary vs Continuous:
+  \itemize{
+    \item If habitat_proportion is NULL: Creates continuous landscape with values 
+      scaled to [min_value, max_value]
+    \item If habitat_proportion is provided: Applies threshold to make binary 
+      (0 = matrix, 1 = habitat), with fractality determining spatial clustering
+  }
+
+Usage in Simulations:
+  Binary landscapes (habitat_proportion specified) are typical for most simulations,
+  representing discrete habitat patches in a hostile matrix. Continuous landscapes
+  represent gradual environmental gradients. The matrix_mortality_multiplier and
+  matrix_dispersal_multiplier parameters in twolife_simulation() only affect 
+  cells with value = 0 in binary landscapes.
+}
+\examples{
+# Example 1: Simple binary landscape for quick testing
+landscape1 <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+# Visualize
+plot_landscape_world_coords(landscape1, main = "Binary Fractal Landscape")
+
+# Example 2: Continuous landscape
+landscape2 <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.8,
+  min_value = 0,
+  max_value = 1
+)
+
+# Check dimensions and values
+dim(landscape2)
+range(landscape2)
+
+# Example 3: Rectangular landscape
+landscape3 <- create_fractal_landscape(
+  cells_per_row = 15,
+  cells_per_col = 20,
+  fractality = 0.6,
+  habitat_proportion = 0.5,
+  return_as_landscape_params = TRUE
+)
+
+# Use in simulation
+result <- twolife_simulation(
+  landscape_params = landscape3,
+  individual_params = list(initial_population_size = 30),
+  simulation_params = list(max_events = 1000),
+  master_seed = 123
+)
+
+\donttest{
+# Example 4: Compare different fractality levels
+par(mfrow = c(2, 2))
+for (frac in c(0.2, 0.5, 0.7, 0.9)) {
+  land <- create_fractal_landscape(
+    cells_per_row = 20,
+    fractality = frac,
+    habitat_proportion = 0.4
+  )
+  plot_landscape_world_coords(
+    list(habitat = land),
+    main = paste("Fractality =", frac)
+  )
+}
+par(mfrow = c(1, 1))
+}
+
+}
+\seealso{
+\code{\link{plot_landscape_world_coords}} for visualization
 }

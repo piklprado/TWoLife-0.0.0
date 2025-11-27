@@ -2,7 +2,7 @@
 % Please edit documentation in R/functions.R
 \name{calculate_genotype_habitat_mismatch}
 \alias{calculate_genotype_habitat_mismatch}
-\title{Calculate Genotype-Habitat Mismatch Statistics Using Fitness}
+\title{Calculate Genotype-Habitat Fitness Statistics}
 \usage{
 calculate_genotype_habitat_mismatch(
   simulation_result,
@@ -10,13 +10,133 @@ calculate_genotype_habitat_mismatch(
 )
 }
 \arguments{
-\item{simulation_result}{A twolife_result object}
+\item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{return_individuals}{Logical. Return individual-level data (default: FALSE)}
+\item{return_individuals}{Logical. Return individual-level data. Default: FALSE}
 }
 \value{
-List of class "genotype_habitat_mismatch" with statistics
+A list of class 'genotype_habitat_mismatch' with components:
+  \describe{
+    \item{n_survivors}{Integer. Number of surviving individuals analyzed}
+    \item{mean_fitness}{Numeric. Mean fitness across all survivors (0-1 scale)}
+    \item{median_fitness}{Numeric. Median fitness}
+    \item{sd_fitness}{Numeric. Standard deviation of fitness}
+    \item{min_fitness}{Numeric. Minimum fitness value}
+    \item{max_fitness}{Numeric. Maximum fitness value}
+    \item{high_fitness_count}{Integer. Number with fitness > 0.8}
+    \item{medium_fitness_count}{Integer. Number with fitness 0.5-0.8}
+    \item{low_fitness_count}{Integer. Number with fitness < 0.5}
+    \item{percent_high_fitness}{Numeric. Percentage with fitness > 0.8}
+    \item{percent_medium_fitness}{Numeric. Percentage with fitness 0.5-0.8}
+    \item{percent_low_fitness}{Numeric. Percentage with fitness < 0.5}
+    \item{correlation}{Numeric. Correlation between phenotype and habitat (-1 to 1)}
+    \item{mean_genotype}{Numeric. Mean genotype value}
+    \item{sd_genotype}{Numeric. SD of genotype}
+    \item{mean_phenotype}{Numeric. Mean phenotype value}
+    \item{sd_phenotype}{Numeric. SD of phenotype}
+    \item{mean_habitat}{Numeric. Mean habitat value at survivor locations}
+    \item{sd_habitat}{Numeric. SD of habitat at survivor locations}
+    \item{mean_niche_width}{Numeric. Mean niche width}
+    \item{sd_niche_width}{Numeric. SD of niche width}
+    \item{mean_absolute_mismatch}{Numeric. Mean |phenotype - habitat|}
+    \item{fitness_values}{Numeric vector. Fitness for each survivor}
+    \item{survivor_data}{Data frame. Detailed data for each survivor}
+  }
+  
+  The object has a custom print method that displays formatted statistics.
 }
 \description{
-Computes fitness-based habitat matching statistics for simulation survivors.
+Computes fitness-based metrics quantifying how well individuals match their
+habitat. Uses a fitness function based on the absolute difference between
+phenotype and habitat quality, scaled by niche width. Provides comprehensive
+statistics on habitat matching quality.
+}
+\details{
+Fitness Calculation:
+  Fitness is calculated as: \code{exp(-(phenotype - habitat)^2 / (2 * niche_width^2))}
+  
+  This Gaussian fitness function produces values between 0 and 1 where:
+  \itemize{
+    \item 1.0 = perfect match (phenotype equals habitat)
+    \item > 0.8 = high fitness (within ~1 niche width)
+    \item 0.5-0.8 = medium fitness (1-2 niche widths away)
+    \item < 0.5 = low fitness (> 2 niche widths away, poor match)
+  }
+  
+  Special case: When niche_width = 0 (specialist with no tolerance), fitness is 1.0
+  if phenotype exactly matches habitat (within 0.001), otherwise 0.0.
+
+Connection to Simulation:
+  During the simulation, this fitness function affects individual demographic rates:
+  \itemize{
+    \item Higher fitness → Lower mortality rate in that habitat
+    \item Higher fitness → Higher birth rate in that habitat  
+    \item Fitness combines with density-dependence to determine realized rates
+  }
+  
+  The correlation between phenotype and habitat indicates the effectiveness of
+  habitat selection and/or evolutionary adaptation over the simulation.
+}
+\examples{
+# Create landscape
+landscape <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+# Run simulation
+result <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  genetic_params = list(
+    genotype_means = runif(30, 0, 1),
+    genotype_sds = 0.1
+  ),
+  simulation_params = list(max_events = 1500),
+  master_seed = 567
+)
+
+# Calculate fitness statistics
+fitness_stats <- calculate_genotype_habitat_mismatch(result)
+
+# Print formatted output
+print(fitness_stats)
+
+# Access specific metrics
+cat("Mean fitness:", fitness_stats$mean_fitness, "\n")
+cat("Correlation:", fitness_stats$correlation, "\n")
+cat("\% high fitness:", fitness_stats$percent_high_fitness, "\n")
+
+# Examine individual fitness values
+hist(fitness_stats$fitness_values, 
+     main = "Distribution of Fitness",
+     xlab = "Fitness (0-1)")
+
+# View detailed survivor data
+head(fitness_stats$survivor_data)
+
+\donttest{
+# Compare scenarios
+result_neutral <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  genetic_params = list(genotype_means = runif(30, 0, 1)),
+  simulation_params = list(max_events = 1500, neutral_mode = TRUE),
+  master_seed = 888
+)
+
+fitness_neutral <- calculate_genotype_habitat_mismatch(result_neutral)
+
+# Compare correlations
+cat("With selection:", fitness_stats$correlation, "\n")
+cat("Neutral:", fitness_neutral$correlation, "\n")
+}
+
+}
+\seealso{
+\code{\link{validate_habitat_matching}} for visual validation,
+  \code{\link{compare_mismatch_statistics}} for comparing multiple simulations,
+  \code{print.genotype_habitat_mismatch} for formatted output
 }

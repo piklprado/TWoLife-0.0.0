@@ -3,15 +3,89 @@
 \docType{data}
 \name{several_small}
 \alias{several_small}
-\title{Example landscape file: several small habitat patches}
+\title{Example Landscape: Multiple Small Habitat Patches}
 \format{
-dataset
+A 15-by-15 integer matrix (225 cells) with binary values:
+\describe{
+  \item{0}{Matrix (non-habitat) cells - 176 cells, 78\%}
+  \item{1}{Habitat cells - 49 cells, 22\%}
+}
+
+The habitat is distributed across 3-4 disconnected patches of varying sizes,
+separated by matrix habitat that creates barriers to dispersal.
 }
 \usage{
 several_small
 }
 \description{
-A pre-computed landscape with multiple small habitat fragments
-for demonstration purposes.
+A pre-computed binary landscape matrix with multiple small, disconnected
+habitat patches. Useful for demonstrating habitat fragmentation effects,
+dispersal limitation, and metapopulation dynamics.
+}
+\details{
+This fragmented landscape is useful for studying:
+\itemize{
+  \item Population persistence in fragmented habitats
+  \item Dispersal behavior and patch colonization
+  \item Metapopulation dynamics and rescue effects
+  \item Extinction-recolonization dynamics
+  \item Source-sink dynamics across different patch sizes
+}
+
+With default parameters, populations face challenges from fragmentation
+including increased extinction risk in small patches and isolation effects.
+}
+\examples{
+# Load and examine the dataset
+data(several_small)
+dim(several_small)
+table(several_small)
+
+# Visualize the landscape
+plot_landscape_world_coords(several_small,
+                            main = "Fragmented Habitat",
+                            colors = "habitat")
+
+# Run a simulation
+result <- twolife_simulation(
+  landscape_params = list(habitat = several_small),
+  individual_params = list(
+    initial_population_size = 30,
+    base_birth_rate = 0.4,
+    base_mortality_rate = 0.2
+  ),
+  simulation_params = list(max_events = 2000)
+)
+
+# View results
+plot_simulation_on_landscape(result)
+
+# Check outcome
+cat("Final population:", nrow(result$survivors), "\n")
+
+# Population trajectory
+pop <- compute_population_size(result)
+plot(pop$time, pop$population_size, type = "l",
+     xlab = "Time", ylab = "Population Size",
+     main = "Dynamics in Fragmented Habitat")
+
+\donttest{
+# Compare with continuous habitat
+data(single_large)
+result2 <- twolife_simulation(
+  landscape_params = list(habitat = single_large),
+  individual_params = list(initial_population_size = 30),
+  simulation_params = list(max_events = 2000)
+)
+
+cat("Fragmented final pop:", nrow(result$survivors), "\n")
+cat("Continuous final pop:", nrow(result2$survivors), "\n")
+}
+
+}
+\seealso{
+\code{\link{single_large}} for a continuous habitat landscape
+
+\code{\link{create_corner_landscape}} for creating test landscapes
 }
 \keyword{datasets}

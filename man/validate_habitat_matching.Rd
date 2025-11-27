@@ -15,24 +15,137 @@ validate_habitat_matching(
 )
 }
 \arguments{
-\item{simulation_result}{A twolife_result object}
+\item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{main}{Character. Plot title}
+\item{main}{Character. Plot title. If NULL, automatically generated. Default: NULL}
 
-\item{point_size}{Numeric. Size of points (default: 2)}
+\item{point_size}{Numeric. Size of points in scatter plot. Default: 2}
 
-\item{landscape_colors}{Character. Color scheme for landscape}
+\item{landscape_colors}{Character. Color scheme for landscape background. 
+Options: "habitat", "terrain", "viridis". Default: "terrain"}
 
-\item{color_by}{Character. Color by "genotype" or "phenotype"}
+\item{color_by}{Character. Which trait to analyze:
+\itemize{
+  \item "genotype" - Analyze genotype-habitat matching
+  \item "phenotype" - Analyze phenotype-habitat matching (recommended for plasticity)
+}
+Default: "phenotype"}
 
-\item{show_stats}{Logical. Display statistics (default: TRUE)}
+\item{show_stats}{Logical. If TRUE, prints statistical summary to console. Default: TRUE}
 
-\item{show_legend}{Logical. Display color legend on plot (default: TRUE)}
+\item{show_legend}{Logical. If TRUE, displays color legend on plot. Default: TRUE}
 }
 \value{
-Validation data frame (invisibly)
+Invisibly returns a data frame with columns:
+  \describe{
+    \item{id}{Integer. Individual ID}
+    \item{x}{Numeric. X coordinate in world space}
+    \item{y}{Numeric. Y coordinate in world space}
+    \item{genotype}{Numeric. Genotype value}
+    \item{phenotype}{Numeric. Phenotype value}
+    \item{habitat_value}{Numeric. Habitat quality at individual's location}
+    \item{row_index}{Integer. Landscape row index (for debugging)}
+    \item{col_index}{Integer. Landscape column index (for debugging)}
+  }
 }
 \description{
-Visualizes and validates whether individuals are positioned in habitat
-matching their genotype or phenotype values.
+Visualizes and quantifies whether individuals are positioned in habitat
+matching their genotype or phenotype values. Provides scatter plots and
+correlation statistics to assess the effectiveness of habitat selection.
+}
+\details{
+Visualization:
+  Creates a two-panel plot:
+  \enumerate{
+    \item Left panel: Landscape with survivor locations colored by trait value. 
+      Visual matching between point colors and background colors suggests good habitat selection.
+    \item Right panel: Scatter plot of trait value vs. habitat value with best-fit line 
+      and Pearson correlation coefficient.
+  }
+
+Correlation Interpretation:
+  \itemize{
+    \item r > 0.7: Strong positive correlation - effective habitat selection or adaptation
+    \item r = 0.3-0.7: Moderate correlation - partial habitat matching
+    \item r < 0.3: Weak correlation - random distribution or neutral scenario
+    \item r < 0: Negative correlation - individuals avoiding preferred habitat (unusual)
+  }
+
+Genotype vs Phenotype Analysis:
+  \itemize{
+    \item Use color_by = "genotype" to test if genetic variation predicts habitat use
+    \item Use color_by = "phenotype" when plasticity is present (recommended) - this 
+      includes both genetic and plastic responses
+    \item With plasticity: phenotype-habitat correlation typically higher than genotype-habitat 
+      correlation because phenotypes adjust to local conditions
+  }
+
+Statistical Output:
+  When show_stats = TRUE, prints:
+  \itemize{
+    \item Sample size
+    \item Pearson correlation with p-value
+    \item Spearman rank correlation (robust to outliers)
+    \item Mean and range of trait and habitat values
+  }
+}
+\examples{
+# Create landscape
+landscape <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+# Simulation with genetic variation
+result <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  genetic_params = list(
+    genotype_means = runif(30, 0, 1),
+    genotype_sds = 0.1
+  ),
+  simulation_params = list(max_events = 1500),
+  master_seed = 789
+)
+
+# Validate genotype matching
+validation_data <- validate_habitat_matching(
+  result,
+  color_by = "genotype"
+)
+
+# Examine specific individuals
+head(validation_data)
+
+# Check correlation manually
+cor(validation_data$genotype, validation_data$habitat_value)
+
+\donttest{
+# Compare with plasticity
+result_plastic <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  genetic_params = list(
+    genotype_means = runif(30, 0, 1),
+    plasticities = 0.5,
+    sampling_points = 5
+  ),
+  simulation_params = list(max_events = 2000),
+  master_seed = 999
+)
+
+# Validate phenotype matching (should show stronger correlation)
+validate_habitat_matching(
+  result_plastic,
+  color_by = "phenotype",
+  main = "Phenotype Matching (with Plasticity)"
+)
+}
+
+}
+\seealso{
+\code{\link{calculate_genotype_habitat_mismatch}} for fitness-based analysis,
+  \code{\link{compare_mismatch_statistics}} for multi-scenario comparisons
 }

@@ -7,12 +7,71 @@
 compute_population_size(result)
 }
 \arguments{
-\item{result}{Result object from twolife_simulation}
+\item{result}{A 'twolife_result' object returned by \code{\link{twolife_simulation}}.
+Must contain \code{$events$times} and \code{$events$types} components.}
 }
 \value{
-Data frame with columns time and population_size
+A data frame with two columns:
+  \describe{
+    \item{time}{Numeric. Event times in chronological order}
+    \item{population_size}{Integer. Population size at each event time (cumulative sum of births and deaths)}
+  }
 }
 \description{
 Computes population size at each event time from simulation results.
-Works with all history_detail levels (only requires times and types).
+Works with all history_detail levels (only requires event times and types).
+Useful for analyzing population dynamics, detecting extinctions, and 
+identifying critical time points.
+}
+\details{
+Event types and their effects on population size:
+\itemize{
+  \item -1 (initial): +1 to population
+  \item 0 (death): -1 from population
+  \item 1 (birth): +1 to population
+  \item 2 (movement): no change to population
+  \item 3 (emigration): -1 from population (only occurs with absorbing boundaries)
+}
+
+Note: Emigration events (type 3) only occur when boundary_condition = 2 (absorbing).
+With reflective boundaries (1), individuals bounce back. With periodic boundaries (3),
+individuals wrap around.
+}
+\examples{
+# Create small landscape
+landscape <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.5,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+# Run simulation
+result <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  simulation_params = list(max_events = 1000),
+  master_seed = 789
+)
+
+# Calculate trajectory
+trajectory <- compute_population_size(result)
+head(trajectory)
+
+# Plot population over time
+plot(trajectory$time, trajectory$population_size, 
+     type = "l", 
+     xlab = "Time", 
+     ylab = "Population Size",
+     main = "Population Dynamics")
+
+# Find peak population
+peak_time <- trajectory$time[which.max(trajectory$population_size)]
+peak_size <- max(trajectory$population_size)
+cat("Peak population:", peak_size, "at time", peak_time, "\n")
+
+}
+\seealso{
+\code{\link{twolife_simulation}} for running simulations,
+  \code{\link{snapshot_at_time}} for reconstructing population state at specific times
 }

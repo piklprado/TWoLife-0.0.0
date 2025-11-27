@@ -13,32 +13,105 @@ snapshot_at_time(
 )
 }
 \arguments{
-\item{simulation_result}{A twolife_result object}
+\item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}.
+Must have been created with \code{history_detail = "standard"} or \code{"full"}.}
 
-\item{target_time}{Numeric. Time point to reconstruct population state}
+\item{target_time}{Numeric. Time point to reconstruct population state. 
+Must be >= 0 and <= maximum simulation time. If larger than max time,
+automatically uses final time with a warning.}
 
-\item{color_by}{Character. What to color points by: "genotype", "phenotype", or "none"}
+\item{color_by}{Character. How to color points in visualization:
+\itemize{
+  \item "genotype" - Color by genotype values
+  \item "phenotype" - Color by phenotype values (requires history_detail = "full")
+  \item "none" - Single color (red)
+}
+Default: "genotype"}
 
-\item{show_plot}{Logical. Display visualization (default: TRUE)}
+\item{show_plot}{Logical. If TRUE, displays visualization of population at target_time. Default: TRUE}
 
-\item{point_size}{Numeric. Size of points in plot (default: 2)}
+\item{point_size}{Numeric. Size of points in plot. Default: 2}
 }
 \value{
-Invisibly returns list with time, n_alive, population, events_processed, and history_level
+Invisibly returns a list with components:
+  \describe{
+    \item{time}{Numeric. The target_time used (may differ from input if capped at max time)}
+    \item{n_alive}{Integer. Number of living individuals at target_time}
+    \item{population}{Data frame with columns: id (integer), x (numeric), y (numeric), 
+      genotype (numeric), phenotype (numeric, NA if history_detail != "full"), 
+      width (numeric, NA if history_detail != "full"), patch_id (integer)}
+    \item{events_processed}{Integer. Number of events processed up to target_time}
+    \item{history_level}{Character. The history_detail level from the simulation 
+      ("minimal", "standard", or "full")}
+  }
 }
 \description{
 Replays the event log from a simulation to reconstruct the exact positions
 and states of all living individuals at a specified time point. Useful for
-temporal analysis and creating animations.
+temporal analysis, creating animations, and studying population dynamics
+at critical moments.
 }
 \details{
-Requires history_detail = "standard" or "full"
+This function requires simulations run with \code{history_detail = "standard"} or 
+\code{"full"}. The "minimal" history level does not record spatial coordinates,
+making reconstruction impossible. The function will check and provide a clear
+error message if the result doesn't support snapshots.
+
+The reconstruction works by:
+\enumerate{
+  \item Filtering events up to target_time
+  \item Tracking births and deaths to determine who is alive
+  \item Recording the most recent position for each living individual
+  \item Optionally visualizing the spatial distribution
+}
 }
 \examples{
-\dontrun{
-result <- twolife_simulation(..., history_detail = "standard")
-state <- snapshot_at_time(result, target_time = 50)
+# Create landscape
+landscape <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+# Run with standard history
+result <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  simulation_params = list(max_events = 1500),
+  history_detail = "standard",
+  master_seed = 123
+)
+
+# Get trajectory to find interesting time
+traj <- compute_population_size(result)
+mid_time <- traj$time[nrow(traj) \%/\% 2]
+
+# Reconstruct population at midpoint
+state <- snapshot_at_time(result, target_time = mid_time)
+
+# Examine the snapshot
+cat("Population at time", state$time, ":", state$n_alive, "individuals\n")
 head(state$population)
+
+# Reconstruct at different times without plotting
+early <- snapshot_at_time(result, target_time = 10, show_plot = FALSE)
+late <- snapshot_at_time(result, target_time = 100, show_plot = FALSE)
+
+cat("Early:", early$n_alive, "alive | Late:", late$n_alive, "alive\n")
+
+\donttest{
+# Create animation sequence
+times <- seq(0, max(traj$time), length.out = 10)
+for (t in times) {
+  snapshot_at_time(result, target_time = t, 
+                  color_by = "genotype", point_size = 3)
+  Sys.sleep(0.5)  # Pause between frames
+}
 }
 
+}
+\seealso{
+\code{\link{compute_population_size}} for population trajectories,
+  \code{\link{twolife_simulation}} for running simulations with appropriate history_detail
 }

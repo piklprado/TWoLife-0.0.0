@@ -1,7 +1,7 @@
 Package: TWoLife
 Type: Package
 Title: Individual-Based Spatial Population Simulations with Genetic Evolution
-Version: 1.0.0
+Version: 0.1.0
 Authors@R: c(
     person("Lucas", "Freitas", 
            email = "rodriguesdefreitas@gmail.com", 
@@ -12,11 +12,12 @@ Authors@R: c(
 Description: Provides a comprehensive framework for individual-based ecological 
     simulations featuring spatial population dynamics, genetic variation, 
     phenotypic plasticity, and habitat selection in heterogeneous landscapes. 
-    Implements fast C++ algorithms for birth-death-dispersal processes with 
-    density dependence and evolutionary mechanisms. Enables researchers to study 
-    eco-evolutionary dynamics, range expansion, adaptive landscapes, and the 
-    interplay between genetic evolution and spatial heterogeneity. Suitable for 
-    applications in conservation biology, evolutionary ecology, and landscape genetics.
+    Implements fast 'C++' algorithms via 'Rcpp' for birth-death-dispersal 
+    processes with density dependence and evolutionary mechanisms. Enables 
+    researchers to study eco-evolutionary dynamics, range expansion, adaptive 
+    landscapes, and the interplay between genetic evolution and spatial 
+    heterogeneity. Suitable for applications in conservation biology, 
+    evolutionary ecology, and landscape genetics.
 License: GPL-3
 Encoding: UTF-8
 Language: en-US
@@ -24,14 +25,17 @@ LazyData: true
 Depends: 
     R (>= 4.0.0)
 Imports: 
-    Rcpp (>= 1.0.0)
+    Rcpp (>= 1.0.0),
+    stats,
+    graphics,
+    grDevices,
+    utils
 LinkingTo: 
     Rcpp
 Suggests: 
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    rflsgen,
     viridisLite
 VignetteBuilder: knitr
 SystemRequirements: C++11

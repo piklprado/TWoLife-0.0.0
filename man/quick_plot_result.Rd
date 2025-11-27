@@ -7,13 +7,52 @@
 quick_plot_result(simulation_result, ...)
 }
 \arguments{
-\item{simulation_result}{A twolife_result object}
+\item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{...}{Additional arguments passed to plot_simulation_on_landscape}
+\item{...}{Additional arguments passed to \code{\link{plot_simulation_on_landscape}}.
+Common options include: point_size, point_color, color_by, landscape_colors, main}
 }
 \value{
-simulation_result (invisibly)
+The input \code{simulation_result} object, invisibly. Allows for piping/chaining.
 }
 \description{
-Convenience wrapper for plot_simulation_on_landscape().
+Convenience wrapper for \code{\link{plot_simulation_on_landscape}} with
+sensible defaults. Provides the fastest way to visualize simulation outcomes.
+}
+\examples{
+# Create and run simulation
+landscape <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+result <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  simulation_params = list(max_events = 1000),
+  master_seed = 999
+)
+
+# Quick plot with defaults
+quick_plot_result(result)
+
+# With custom options
+quick_plot_result(result, point_size = 3, point_color = "blue")
+
+# Color by genotype
+result_genetic <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  genetic_params = list(genotype_means = runif(30, 0, 1)),
+  simulation_params = list(max_events = 1000),
+  master_seed = 888
+)
+
+quick_plot_result(result_genetic, color_by = "genotype")
+
+}
+\seealso{
+\code{\link{plot_simulation_on_landscape}} for full control over plotting options
 }

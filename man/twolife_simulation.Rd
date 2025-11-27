@@ -16,30 +16,192 @@ twolife_simulation(
 )
 }
 \arguments{
-\item{landscape_params}{List containing landscape parameters including habitat matrix}
+\item{landscape_params}{List containing landscape parameters. Required component:
+\describe{
+  \item{habitat}{Matrix. Binary (0/1) or continuous habitat values. Required.}
+  \item{cell_size}{Numeric. Size of each landscape cell. Default: 1.0}
+  \item{boundary_condition}{Integer. Boundary behavior: 1 = reflective (individuals bounce 
+    back into landscape), 2 = absorbing (individuals leave and are removed, generating 
+    emigration events), 3 = periodic (individuals wrap to opposite edge, torus topology). 
+    Default: 1}
+  \item{density_type}{Integer. Density calculation: 1 = local (within neighbor_radius), 
+    2 = global (entire population). Default: 1}
+  \item{matrix_mortality_multiplier}{Numeric. Mortality multiplier for matrix cells (habitat=0). 
+    Values > 1 increase mortality in matrix. Default: 2.0}
+  \item{matrix_dispersal_multiplier}{Numeric. Dispersal multiplier for matrix cells. 
+    Values < 1 reduce movement in matrix (movement costs). Default: 0.5}
+}}
 
-\item{individual_params}{List containing individual parameters}
+\item{individual_params}{List containing individual-level parameters:
+\describe{
+  \item{initial_population_size}{Integer. Starting population size. Default: 200}
+  \item{neighbor_radius}{Numeric. Radius for density calculations (world units). Default: 2.0}
+  \item{vision_angle}{Numeric. Vision angle in radians for movement decisions. 
+    pi (180°) = forward hemisphere, 2*pi (360°) = random walk. Default: pi}
+  \item{step_length}{Numeric. Distance moved per dispersal event (world units). Default: 1.0}
+  \item{base_dispersal_rate}{Numeric. Base dispersal probability per time unit (0-1). Default: 0.1}
+  \item{base_birth_rate}{Numeric. Base birth probability per time unit (0-1). 
+    Must be > base_mortality_rate for population persistence. Default: 0.3}
+  \item{base_mortality_rate}{Numeric. Base mortality probability per time unit (0-1). Default: 0.20}
+  \item{birth_density_slope}{Numeric. Density-dependence slope for births (negative effect). Default: 0.02}
+  \item{mortality_density_slope}{Numeric. Density-dependence slope for mortality (positive effect). Default: 0.02}
+  \item{initial_placement_mode}{Integer. Placement strategy: 1 = random in habitat cells, 
+    2 = random anywhere with normal distribution around center, 3 = custom coordinates. Default: 1}
+  \item{initial_x_coordinates}{Numeric vector. Custom x positions (required if initial_placement_mode = 3)}
+  \item{initial_y_coordinates}{Numeric vector. Custom y positions (required if initial_placement_mode = 3)}
+}}
 
-\item{genetic_params}{List containing genetic parameters}
+\item{genetic_params}{List containing genetic parameters (each can be single value or vector matching initial_population_size):
+\describe{
+  \item{genotype_means}{Numeric. Mean genotype values (underlying genetic optimum). Default: 1}
+  \item{genotype_sds}{Numeric. Standard deviations (niche width - tolerance to habitat mismatch). 
+    Smaller values = specialist, larger values = generalist. Default: 0}
+  \item{mutation_rates}{Numeric. Per-birth mutation rate (SD of normal distribution added to 
+    offspring genotype). Higher values = more genetic variation between generations. Default: 0}
+  \item{plasticities}{Numeric. Phenotypic plasticity (SD of normal distribution added to 
+    individual phenotype from genotype). Higher values = more phenotypic variation from environment. 
+    Works similarly to mutation_rates but affects phenotype expression rather than inheritance. Default: 0}
+  \item{sampling_points}{Integer. Number of habitat locations sampled for plasticity calculation. 
+    Higher values = more accurate environmental assessment but slower. Only relevant if plasticities > 0. 
+    Default: 0}
+  \item{habitat_selection_temperatures}{Numeric. Temperature parameter for softmax habitat selection 
+    (must be positive). Controls selection strength during dispersal: Lower values (< 1) = strong 
+    selection (nearly always choose best habitat), higher values (> 1) = weak selection (more 
+    exploration/randomness), 1 = balanced (probability of choosing habitat proportional to its 
+    relative fitness). Default: 1.0}
+}}
 
-\item{simulation_params}{List containing simulation control parameters}
+\item{simulation_params}{List containing simulation control parameters:
+\describe{
+  \item{max_events}{Integer. Maximum number of events to simulate. Default: 50 * initial_population_size}
+  \item{neutral_mode}{Logical. If TRUE, disables habitat selection (all locations equally preferred, 
+    and all individuals are assigned the average genotype of the initial population). Useful for 
+    null model comparisons to test effects of habitat selection. Default: FALSE}
+}}
 
-\item{history_detail}{Character. Level of event history detail to record:
-"minimal" for only time, event type, and individual ID (fastest, smallest memory),
-"standard" for adding spatial coordinates, patch ID, and genotype (default),
-"full" for adding phenotype and niche width (enables exact historical reconstruction)}
+\item{history_detail}{Character. Level of event history detail to record.
+Options: "minimal" (only time, event type, individual ID - fastest, smallest memory),
+"standard" (adds spatial coordinates, patch ID, genotype - enables most analyses),
+"full" (adds phenotype and niche width - enables exact historical reconstruction).
+Default: "standard"}
 
-\item{master_seed}{Integer seed for reproducible simulations (optional)}
-
-\item{...}{Additional named arguments (deprecated)}
-
-\item{output_file}{Optional file path for detailed event output}
+\item{master_seed}{Integer. Seed for reproducible simulations. If NULL, results are stochastic. Default: NULL}
 }
 \value{
-A list of class 'twolife_result' containing simulation results
+A list of class 'twolife_result' with components:
+  \describe{
+    \item{summary}{List with status ("surviving" or "extinct"), final_population_size (integer), 
+      total_events (integer), and duration (numeric time units)}
+    \item{survivors}{Data frame with columns: id (integer), x (numeric), y (numeric), 
+      genotype (numeric), phenotype (numeric), width (numeric). Empty data frame if extinct.}
+    \item{spatial}{List containing world_width (numeric), world_height (numeric), 
+      world_size (numeric, max of width/height), num_patches (integer)}
+    \item{events}{List with event history. Content depends on history_detail:
+      \itemize{
+        \item Always included: times (numeric vector), types (integer vector: -1=initial, 0=death, 
+          1=birth, 2=movement, 3=emigration), individual_ids (integer vector)
+        \item If history_detail != "minimal": patch_ids, x_coordinates, y_coordinates, genotypes
+        \item If history_detail == "full": phenotypes, widths
+      }}
+    \item{parameters}{Nested list preserving all input parameters (landscape, individual, genetic, simulation)}
+  }
 }
 \description{
 Runs a spatially-explicit individual-based simulation with habitat selection,
 genetic variation, and demographic processes. Supports rectangular landscapes
 and customizable habitat selection parameters.
+}
+\details{
+Simulation Stopping Conditions:
+  The simulation automatically stops when any of these conditions is met:
+  \itemize{
+    \item Population reaches 0 (extinction)
+    \item Population exceeds 1,000,000 individuals (overflow protection)
+    \item max_events is reached
+  }
+  Users can interrupt long simulations with Ctrl+C or Esc. The simulation checks 
+  for user interrupts every 1000 events.
+
+Genetic Architecture:
+  The model implements a quantitative genetics framework:
+  \itemize{
+    \item Genotype: Underlying genetic optimum (heritable, passed to offspring with mutation)
+    \item Mutation: Offspring genotype = parent genotype + N(0, mutation_rate)
+    \item Phenotype: Expressed optimum = genotype + N(0, plasticity), where N(0, plasticity) 
+      is random normal variation representing environmental influence
+    \item Niche width (genotype_sds): Determines fitness specialism via Gaussian fitness function. 
+      Smaller values create specialists (fitness drops sharply away from optimum), larger values 
+      create generalists (fitness remains high across wider habitat range).
+  }
+  Higher fitness increases birth rate and decreases mortality rate relative to habitat quality.
+  Mutation affects inheritance (parent to offspring), while plasticity affects individual 
+  phenotype expression within a generation.
+
+Boundary Conditions:
+  When individuals move beyond landscape edges:
+  \itemize{
+    \item Reflective (1): Individual bounces back, remains in simulation
+    \item Absorbing (2): Individual exits permanently (emigration event, type = 3)
+    \item Periodic (3): Individual wraps to opposite edge (torus topology)
+  }
+
+Event Types:
+  Event history records these event types:
+  \itemize{
+    \item -1: Initial placement
+    \item 0: Death (natural or density-dependent)
+    \item 1: Birth (reproduction)
+    \item 2: Movement (dispersal within landscape)
+    \item 3: Emigration (boundary crossing with absorbing boundaries)
+  }
+}
+\examples{
+# Example 1: Basic simulation with small landscape
+landscape <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.7,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+result <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(
+    initial_population_size = 30,
+    base_birth_rate = 0.3,
+    base_mortality_rate = 0.2
+  ),
+  simulation_params = list(max_events = 1000),
+  master_seed = 123
+)
+
+print(result)
+head(result$survivors)
+
+# Example 2: With genetic variation
+result_genetic <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  genetic_params = list(
+    genotype_means = rnorm(30, mean = 0.5, sd = 0.2),
+    genotype_sds = 0.1
+  ),
+  simulation_params = list(max_events = 1000),
+  master_seed = 456
+)
+
+\donttest{
+# Longer simulation for detailed analysis
+result_long <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 50),
+  simulation_params = list(max_events = 5000),
+  history_detail = "full"
+)
+
+# Analyze population trajectory
+pop_trajectory <- compute_population_size(result_long)
+plot(pop_trajectory$time, pop_trajectory$population_size, type = "l")
+}
+
 }
