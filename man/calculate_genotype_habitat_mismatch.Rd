@@ -136,7 +136,5 @@ cat("Neutral:", fitness_neutral$correlation, "\n")
 
 }
 \seealso{
-\code{\link{validate_habitat_matching}} for visual validation,
-  \code{\link{compare_mismatch_statistics}} for comparing multiple simulations,
-  \code{print.genotype_habitat_mismatch} for formatted output
+\code{\link{validate_habitat_matching}} for visual validation
 }

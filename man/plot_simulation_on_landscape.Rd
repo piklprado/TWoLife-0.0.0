@@ -155,6 +155,6 @@ plot_simulation_on_landscape(
 
 }
 \seealso{
-\code{\link{quick_plot_result}} for a convenience wrapper,
+\code{\link{plot.twolife_result}} for S3 method (use \code{plot(result)}),
   \code{\link{validate_habitat_matching}} for habitat-trait correlation plots
 }

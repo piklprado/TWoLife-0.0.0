@@ -146,6 +146,5 @@ validate_habitat_matching(
 
 }
 \seealso{
-\code{\link{calculate_genotype_habitat_mismatch}} for fitness-based analysis,
-  \code{\link{compare_mismatch_statistics}} for multi-scenario comparisons
+\code{\link{calculate_genotype_habitat_mismatch}} for fitness-based analysis
 }

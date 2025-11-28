@@ -1466,7 +1466,7 @@ plot_landscape_world_coords <- function(landscape_data,
 #' )
 #' }
 #' 
-#' @seealso \code{\link{quick_plot_result}} for a convenience wrapper,
+#' @seealso \code{\link{plot.twolife_result}} for S3 method (use \code{plot(result)}),
 #'   \code{\link{validate_habitat_matching}} for habitat-trait correlation plots
 #' 
 #' @export
@@ -1573,19 +1573,89 @@ plot_simulation_on_landscape <- function(simulation_result,
   invisible(simulation_result)
 }
 
-#' Quick Plot of Simulation Results
+# ============================================================================
+# S3 METHODS FOR TWOLIFE_RESULT CLASS
+# ============================================================================
+
+#' Print Method for TWoLife Results
 #' 
-#' Convenience wrapper for \code{\link{plot_simulation_on_landscape}} with
-#' sensible defaults. Provides the fastest way to visualize simulation outcomes.
+#' Provides a clean summary when a twolife_result object is printed to console.
+#' Shows key simulation outcomes without overwhelming detail.
 #' 
-#' @param simulation_result A 'twolife_result' object from \code{\link{twolife_simulation}}
-#' @param ... Additional arguments passed to \code{\link{plot_simulation_on_landscape}}.
-#'   Common options include: point_size, point_color, color_by, landscape_colors, main
+#' @param x A 'twolife_result' object from \code{\link{twolife_simulation}}
+#' @param ... Additional arguments (currently unused)
 #' 
-#' @return The input \code{simulation_result} object, invisibly. Allows for piping/chaining.
+#' @return The input object \code{x}, invisibly
 #' 
 #' @examples
-#' # Create and run simulation
+#' landscape <- create_fractal_landscape(
+#'   cells_per_row = 15,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.4,
+#'   return_as_landscape_params = TRUE
+#' )
+#' 
+#' result <- twolife_simulation(
+#'   landscape_params = landscape,
+#'   individual_params = list(initial_population_size = 30),
+#'   simulation_params = list(max_events = 500),
+#'   master_seed = 123
+#' )
+#' 
+#' # Just type the object name to see summary
+#' result
+#' 
+#' # Or explicitly call print
+#' print(result)
+#' 
+#' @export
+print.twolife_result <- function(x, ...) {
+  cat("TWoLife Simulation Result\n")
+  cat("==========================\n\n")
+  cat("Status:", x$summary$status, "\n")
+  cat("Final population:", x$summary$final_population_size, "\n")
+  cat("Total events:", x$summary$total_events, "\n")
+  cat("Duration:", round(x$summary$duration, 2), "time units\n")
+  
+  if (x$summary$status == "surviving" && !is.null(x$survivors)) {
+    cat("\nSurvivors:", nrow(x$survivors), "individuals\n")
+    if ("genotype" %in% names(x$survivors)) {
+      cat("Genotype range:", 
+          round(range(x$survivors$genotype), 3), "\n")
+    }
+  }
+  
+  cat("\nLandscape:", 
+      nrow(x$parameters$landscape$habitat), "×", 
+      ncol(x$parameters$landscape$habitat), "cells\n")
+  
+  cat("\nUse summary() for more details\n")
+  cat("Use plot() to visualize results\n")
+  
+  invisible(x)
+}
+
+#' Summary Method for TWoLife Results
+#' 
+#' Provides detailed statistical summary of simulation outcomes including
+#' population dynamics, spatial patterns, and genetic characteristics.
+#' 
+#' @param object A 'twolife_result' object from \code{\link{twolife_simulation}}
+#' @param ... Additional arguments (currently unused)
+#' 
+#' @return A list of class 'summary.twolife_result' containing:
+#'   \describe{
+#'     \item{status}{Simulation outcome ("surviving" or "extinct")}
+#'     \item{n_survivors}{Final population size}
+#'     \item{initial_pop}{Starting population size}
+#'     \item{events}{Total number of events simulated}
+#'     \item{duration}{Simulation duration in time units}
+#'     \item{extinction_time}{Time of extinction (NA if surviving)}
+#'     \item{landscape_size}{Dimensions of landscape (rows × columns)}
+#'     \item{history_detail}{Level of event history recorded}
+#'   }
+#' 
+#' @examples
 #' landscape <- create_fractal_landscape(
 #'   cells_per_row = 15,
 #'   fractality = 0.7,
@@ -1595,33 +1665,114 @@ plot_simulation_on_landscape <- function(simulation_result,
 #' 
 #' result <- twolife_simulation(
 #'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   simulation_params = list(max_events = 1000),
-#'   master_seed = 999
+#'   individual_params = list(initial_population_size = 50),
+#'   simulation_params = list(max_events = 2000),
+#'   master_seed = 456
 #' )
 #' 
-#' # Quick plot with defaults
-#' quick_plot_result(result)
+#' # Get detailed summary
+#' summary(result)
 #' 
-#' # With custom options
-#' quick_plot_result(result, point_size = 3, point_color = "blue")
-#' 
-#' # Color by genotype
-#' result_genetic <- twolife_simulation(
-#'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   genetic_params = list(genotype_means = runif(30, 0, 1)),
-#'   simulation_params = list(max_events = 1000),
-#'   master_seed = 888
-#' )
-#' 
-#' quick_plot_result(result_genetic, color_by = "genotype")
-#' 
-#' @seealso \code{\link{plot_simulation_on_landscape}} for full control over plotting options
+#' # Store summary for further use
+#' sim_summary <- summary(result)
+#' sim_summary$n_survivors
 #' 
 #' @export
-quick_plot_result <- function(simulation_result, ...) {
-  plot_simulation_on_landscape(simulation_result, ...)
+summary.twolife_result <- function(object, ...) {
+  structure(
+    list(
+      status = object$summary$status,
+      n_survivors = object$summary$final_population_size,
+      initial_pop = object$parameters$individual$initial_population_size,
+      events = object$summary$total_events,
+      duration = object$summary$duration,
+      extinction_time = if (object$summary$status == "extinct") 
+        max(object$events$times) else NA,
+      landscape_size = dim(object$parameters$landscape$habitat),
+      history_detail = object$parameters$simulation$history_detail
+    ),
+    class = "summary.twolife_result"
+  )
+}
+
+#' Print Method for TWoLife Summary
+#' 
+#' Prints the summary of a twolife_result object in a readable format.
+#' 
+#' @param x A 'summary.twolife_result' object from \code{summary.twolife_result()}
+#' @param ... Additional arguments (currently unused)
+#' 
+#' @return The input object \code{x}, invisibly
+#' 
+#' @export
+print.summary.twolife_result <- function(x, ...) {
+  cat("TWoLife Simulation Summary\n")
+  cat("===========================\n\n")
+  
+  cat("Population Dynamics:\n")
+  cat("  Initial population:", x$initial_pop, "\n")
+  cat("  Final population:", x$n_survivors, "\n")
+  cat("  Status:", x$status, "\n")
+  
+  if (!is.na(x$extinction_time)) {
+    cat("  Extinction time:", round(x$extinction_time, 2), "time units\n")
+  }
+  
+  cat("\nSimulation Details:\n")
+  cat("  Total events:", x$events, "\n")
+  cat("  Duration:", round(x$duration, 2), "time units\n")
+  cat("  Events per time unit:", round(x$events / x$duration, 2), "\n")
+  
+  cat("\nLandscape:\n")
+  cat("  Dimensions:", x$landscape_size[1], "×", x$landscape_size[2], "cells\n")
+  cat("  Total cells:", prod(x$landscape_size), "\n")
+  
+  cat("\nHistory Detail:", x$history_detail, "\n")
+  
+  invisible(x)
+}
+
+#' Plot Method for TWoLife Results
+#' 
+#' Generic plot method for twolife_result objects. Calls 
+#' \code{\link{plot_simulation_on_landscape}} with convenient syntax.
+#' 
+#' @param x A 'twolife_result' object from \code{\link{twolife_simulation}}
+#' @param ... Additional arguments passed to \code{\link{plot_simulation_on_landscape}}.
+#'   Common options include: point_size, point_color, color_by, landscape_colors, main
+#' 
+#' @return The input object \code{x}, invisibly
+#' 
+#' @examples
+#' landscape <- create_fractal_landscape(
+#'   cells_per_row = 15,
+#'   fractality = 0.5,
+#'   habitat_proportion = 0.4,
+#'   return_as_landscape_params = TRUE
+#' )
+#' 
+#' result <- twolife_simulation(
+#'   landscape_params = landscape,
+#'   individual_params = list(initial_population_size = 30),
+#'   simulation_params = list(max_events = 1000),
+#'   master_seed = 789
+#' )
+#' 
+#' # Simple plot using S3 method
+#' plot(result)
+#' 
+#' # With options
+#' plot(result, point_size = 3, color_by = "genotype")
+#' 
+#' # Equivalent to:
+#' plot_simulation_on_landscape(result, point_size = 3, color_by = "genotype")
+#' 
+#' @seealso \code{\link{plot_simulation_on_landscape}} for full documentation of plotting options
+#' 
+#' @export
+plot.twolife_result <- function(x, ...) {
+  plot_simulation_on_landscape(x, ...)
+  invisible(x)
 }
 
 # ============================================================================
@@ -1751,8 +1902,7 @@ quick_plot_result <- function(simulation_result, ...) {
 #' )
 #' }
 #' 
-#' @seealso \code{\link{calculate_genotype_habitat_mismatch}} for fitness-based analysis,
-#'   \code{\link{compare_mismatch_statistics}} for multi-scenario comparisons
+#' @seealso \code{\link{calculate_genotype_habitat_mismatch}} for fitness-based analysis
 #' 
 #' @export
 validate_habitat_matching <- function(simulation_result,
@@ -1931,62 +2081,6 @@ validate_habitat_matching <- function(simulation_result,
   return(invisible(validation_data))
 }
 
-#' Batch Validate Multiple Simulations
-#' 
-#' Validate habitat matching across multiple simulation results.
-#' 
-#' @param result_list List of twolife_result objects
-#' @param point_size Numeric. Point size for plots (default: 1.5)
-#' @param landscape_colors Character. Color scheme
-#' @param show_legend Logical. Display color legend on plots (default: TRUE)
-#' 
-#' @return List of validation data frames (invisibly)
-#' 
-#' @export
-batch_validate_habitat_matching <- function(result_list, 
-                                            point_size = 1.5,
-                                            landscape_colors = "terrain",
-                                            show_legend = TRUE) {
-  
-  n_results <- length(result_list)
-  
-  if (n_results == 0) {
-    stop("result_list cannot be empty", call. = FALSE)
-  }
-  
-  if (n_results <= 2) {
-    par(mfrow = c(1, n_results * 2))
-  } else if (n_results <= 4) {
-    par(mfrow = c(2, 4))
-  } else if (n_results <= 6) {
-    par(mfrow = c(3, 4))
-  } else {
-    par(mfrow = c(4, 4))
-  }
-  
-  validation_results <- list()
-  
-  for (i in seq_along(result_list)) {
-    result_name <- if (is.null(names(result_list)[i])) paste("Result", i) else names(result_list)[i]
-    result <- result_list[[i]]
-    
-    cat("\n", result_name, "\n", sep = "")
-    validation_results[[i]] <- validate_habitat_matching(
-      result, 
-      main = result_name,
-      point_size = point_size,
-      landscape_colors = landscape_colors,
-      show_stats = TRUE,
-      show_legend = show_legend
-    )
-    names(validation_results)[i] <- result_name
-  }
-  
-  par(mfrow = c(1, 1))
-  
-  return(invisible(validation_results))
-}
-
 #' Calculate Genotype-Habitat Fitness Statistics
 #' 
 #' Computes fitness-based metrics quantifying how well individuals match their
@@ -2110,9 +2204,7 @@ batch_validate_habitat_matching <- function(result_list,
 #' cat("Neutral:", fitness_neutral$correlation, "\n")
 #' }
 #' 
-#' @seealso \code{\link{validate_habitat_matching}} for visual validation,
-#'   \code{\link{compare_mismatch_statistics}} for comparing multiple simulations,
-#'   \code{print.genotype_habitat_mismatch} for formatted output
+#' @seealso \code{\link{validate_habitat_matching}} for visual validation
 #' 
 #' @export
 calculate_genotype_habitat_mismatch <- function(simulation_result, 
@@ -2240,256 +2332,6 @@ calculate_genotype_habitat_mismatch <- function(simulation_result,
   return(results)
 }
 
-#' Compare Mismatch Statistics Across Multiple Simulations
-#' 
-#' Compares habitat matching and fitness statistics across multiple simulation
-#' results. Useful for evaluating the effects of different parameters, landscapes,
-#' or genetic architectures on habitat selection outcomes.
-#' 
-#' @param result_list A named or unnamed list of 'twolife_result' objects.
-#'   If named, names will be used as scenario labels in output. If unnamed,
-#'   automatic labels ("Result 1", "Result 2", etc.) will be generated.
-#' 
-#' @return Invisibly returns a list with two components:
-#'   \describe{
-#'     \item{comparison}{Data frame comparing scenarios with columns: Scenario (character),
-#'       N_Survivors (integer), Mean_Fitness (numeric), Median_Fitness (numeric),
-#'       Percent_High_Fitness (numeric, % with fitness > 0.8), 
-#'       Percent_Low_Fitness (numeric, % with fitness < 0.5),
-#'       Correlation (numeric, phenotype-habitat correlation),
-#'       Mean_Mismatch (numeric, mean |phenotype - habitat|),
-#'       Mean_Niche_Width (numeric)}
-#'     \item{detailed}{List of complete mismatch statistics for each scenario (output from 
-#'       \code{\link{calculate_genotype_habitat_mismatch}} for each result)}
-#'   }
-#'   
-#'   The function prints formatted comparison table and identifies best-performing scenarios.
-#' 
-#' @details
-#' Use Cases:
-#'   This function is particularly useful for:
-#'   \itemize{
-#'     \item Comparing different landscapes (e.g., fragmented vs. continuous)
-#'     \item Evaluating genetic architecture effects (e.g., plasticity vs. no plasticity)
-#'     \item Testing parameter sensitivity (e.g., different mutation rates, niche widths)
-#'     \item Comparing neutral vs. selective scenarios (using neutral_mode parameter)
-#'     \item Assessing different boundary conditions or density-dependence settings
-#'   }
-#' 
-#' Output Interpretation:
-#'   The comparison table shows:
-#'   \itemize{
-#'     \item Mean_Fitness: Higher values indicate better overall habitat matching (0-1 scale)
-#'     \item Correlation: Stronger positive values indicate more effective habitat selection
-#'     \item Percent_High_Fitness: Proportion thriving in suitable habitat (fitness > 0.8)
-#'     \item Mean_Mismatch: Lower values indicate closer phenotype-habitat matching
-#'   }
-#' 
-#' Automated Identification:
-#'   The function automatically identifies and highlights:
-#'   \itemize{
-#'     \item Scenario with highest mean fitness (→)
-#'     \item Scenario with strongest phenotype-habitat correlation (→)
-#'     \item Scenario with highest proportion of high-fitness individuals (→)
-#'   }
-#'   
-#'   Markers (→) help quickly identify best-performing scenarios for different metrics.
-#' 
-#' Typical Comparisons:
-#'   \itemize{
-#'     \item Plasticity effect: With plasticity should show higher fitness and correlation
-#'     \item Neutral vs selective: Selective should show higher correlation
-#'     \item Landscape quality: Higher habitat proportion typically increases mean fitness
-#'     \item Genetic variation: More variation enables better habitat matching when selection is active
-#'   }
-#' 
-#' @examples
-#' # Create landscape
-#' landscape <- create_fractal_landscape(
-#'   cells_per_row = 15,
-#'   fractality = 0.7,
-#'   habitat_proportion = 0.4,
-#'   return_as_landscape_params = TRUE
-#' )
-#' 
-#' # Scenario 1: No genetic variation
-#' result1 <- twolife_simulation(
-#'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   simulation_params = list(max_events = 1000),
-#'   master_seed = 111
-#' )
-#' 
-#' # Scenario 2: With genetic variation
-#' result2 <- twolife_simulation(
-#'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   genetic_params = list(genotype_means = runif(30, 0, 1)),
-#'   simulation_params = list(max_events = 1000),
-#'   master_seed = 222
-#' )
-#' 
-#' # Scenario 3: Neutral (no habitat selection)
-#' result3 <- twolife_simulation(
-#'   landscape_params = landscape,
-#'   individual_params = list(initial_population_size = 30),
-#'   genetic_params = list(genotype_means = runif(30, 0, 1)),
-#'   simulation_params = list(max_events = 1000, neutral_mode = TRUE),
-#'   master_seed = 333
-#' )
-#' 
-#' # Compare all three
-#' comparison <- compare_mismatch_statistics(list(
-#'   "No variation" = result1,
-#'   "With variation" = result2,
-#'   "Neutral" = result3
-#' ))
-#' 
-#' # Access detailed results
-#' comparison$comparison  # Summary table
-#' comparison$detailed[[1]]  # Full stats for scenario 1
-#' 
-#' \donttest{
-#' # Compare different landscapes
-#' landscape_fragmented <- create_fractal_landscape(
-#'   15, fractality = 0.9, habitat_proportion = 0.3, 
-#'   return_as_landscape_params = TRUE
-#' )
-#' 
-#' landscape_continuous <- create_fractal_landscape(
-#'   15, fractality = 0.3, habitat_proportion = 0.6,
-#'   return_as_landscape_params = TRUE
-#' )
-#' 
-#' result_frag <- twolife_simulation(
-#'   landscape_params = landscape_fragmented,
-#'   individual_params = list(initial_population_size = 30),
-#'   genetic_params = list(genotype_means = runif(30, 0, 1)),
-#'   simulation_params = list(max_events = 2000),
-#'   master_seed = 444
-#' )
-#' 
-#' result_cont <- twolife_simulation(
-#'   landscape_params = landscape_continuous,
-#'   individual_params = list(initial_population_size = 30),
-#'   genetic_params = list(genotype_means = runif(30, 0, 1)),
-#'   simulation_params = list(max_events = 2000),
-#'   master_seed = 555
-#' )
-#' 
-#' compare_mismatch_statistics(list(
-#'   "Fragmented" = result_frag,
-#'   "Continuous" = result_cont
-#' ))
-#' }
-#' 
-#' @seealso \code{\link{calculate_genotype_habitat_mismatch}} for single-scenario analysis,
-#'   \code{\link{validate_habitat_matching}} for visual validation
-#' 
-#' @export
-compare_mismatch_statistics <- function(result_list) {
-  
-  if (!is.list(result_list) || length(result_list) == 0) {
-    stop("result_list must be a non-empty list", call. = FALSE)
-  }
-  
-  mismatch_list <- lapply(result_list, calculate_genotype_habitat_mismatch)
-  
-  comparison_df <- data.frame(
-    Scenario = if (is.null(names(result_list))) {
-      paste("Result", seq_along(result_list))
-    } else {
-      names(result_list)
-    },
-    N_Survivors = sapply(mismatch_list, function(x) x$n_survivors),
-    Mean_Fitness = sapply(mismatch_list, function(x) round(x$mean_fitness, 4)),
-    Median_Fitness = sapply(mismatch_list, function(x) round(x$median_fitness, 4)),
-    Percent_High_Fitness = sapply(mismatch_list, function(x) round(x$percent_high_fitness, 1)),
-    Percent_Low_Fitness = sapply(mismatch_list, function(x) round(x$percent_low_fitness, 1)),
-    Correlation = sapply(mismatch_list, function(x) round(x$correlation, 4)),
-    Mean_Mismatch = sapply(mismatch_list, function(x) round(x$mean_absolute_mismatch, 4)),
-    Mean_Niche_Width = sapply(mismatch_list, function(x) round(x$mean_niche_width, 4)),
-    stringsAsFactors = FALSE
-  )
-  
-  cat("Fitness-Based Habitat Matching Comparison\n")
-  cat("==========================================\n\n")
-  print(comparison_df, row.names = FALSE)
-  
-  cat("\nKey Insights:\n")
-  cat("-------------\n")
-  
-  if (nrow(comparison_df) > 1) {
-    best_fitness <- which.max(comparison_df$Mean_Fitness)
-    best_correlation <- which.max(comparison_df$Correlation)
-    most_high_fitness <- which.max(comparison_df$Percent_High_Fitness)
-    
-    cat("Best mean fitness:", comparison_df$Scenario[best_fitness], 
-        "(", comparison_df$Mean_Fitness[best_fitness], ")\n")
-    cat("Best correlation:", comparison_df$Scenario[best_correlation], 
-        "(r =", comparison_df$Correlation[best_correlation], ")\n")
-    cat("Most high-fitness individuals:", comparison_df$Scenario[most_high_fitness],
-        "(", comparison_df$Percent_High_Fitness[most_high_fitness], "%)\n")
-    
-    if (best_fitness == best_correlation && best_correlation == most_high_fitness) {
-      cat("\n-> Same scenario excels in all fitness metrics!\n")
-    }
-  }
-  
-  return(invisible(list(
-    comparison = comparison_df,
-    detailed = mismatch_list
-  )))
-}
-
-# ============================================================================
-# PRINT METHODS
-# ============================================================================
-
-#' Print Method for TWoLife Results
-#' 
-#' @param x A twolife_result object
-#' @param ... Additional arguments (ignored)
-#' 
-#' @return x (invisibly)
-#' 
-#' @export
-print.twolife_result <- function(x, ...) {
-  cat("TWoLife Simulation Result\n")
-  cat("========================\n")
-  cat("Status:", x$summary$status, "\n")
-  cat("Final population:", x$summary$final_population_size, "\n") 
-  cat("Duration:", round(x$summary$duration, 2), "\n")
-  cat("Total events:", x$summary$total_events, "\n")
-  
-  if (!is.null(x$spatial$world_width) && !is.null(x$spatial$world_height)) {
-    cat("World size:", round(x$spatial$world_width, 2), "x", round(x$spatial$world_height, 2), "\n")
-    if (abs(x$spatial$world_width - x$spatial$world_height) < 1e-10) {
-      cat("Landscape shape: Square\n")
-    } else {
-      cat("Landscape shape: Rectangular\n")
-    }
-  } else {
-    cat("World size:", x$spatial$world_size, "x", x$spatial$world_size, "\n")
-  }
-  
-  # Show history detail level
-  history_level <- x$parameters$simulation$history_detail
-  if (!is.null(history_level)) {
-    cat("History detail:", history_level, "\n")
-  }
-  
-  if (x$summary$final_population_size > 0) {
-    cat("Survivors: Use result$survivors for details\n")
-    cat("Columns: id, x, y, genotype, phenotype, width\n")
-  }
-  cat("\nUse compute_population_size() for trajectory analysis.\n")
-  cat("Use plot_simulation_on_landscape() for visualization.\n")
-  if (!is.null(history_level) && history_level %in% c("standard", "full")) {
-    cat("Use snapshot_at_time() for temporal reconstruction.\n")
-  }
-  invisible(x)
-}
 
 #' Print Method for Mismatch Statistics
 #' 

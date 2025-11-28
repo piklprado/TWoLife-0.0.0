@@ -7,13 +7,36 @@
 \method{print}{twolife_result}(x, ...)
 }
 \arguments{
-\item{x}{A twolife_result object}
+\item{x}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{...}{Additional arguments (ignored)}
+\item{...}{Additional arguments (currently unused)}
 }
 \value{
-x (invisibly)
+The input object \code{x}, invisibly
 }
 \description{
-Print Method for TWoLife Results
+Provides a clean summary when a twolife_result object is printed to console.
+Shows key simulation outcomes without overwhelming detail.
+}
+\examples{
+landscape <- create_fractal_landscape(
+  cells_per_row = 15,
+  fractality = 0.5,
+  habitat_proportion = 0.4,
+  return_as_landscape_params = TRUE
+)
+
+result <- twolife_simulation(
+  landscape_params = landscape,
+  individual_params = list(initial_population_size = 30),
+  simulation_params = list(max_events = 500),
+  master_seed = 123
+)
+
+# Just type the object name to see summary
+result
+
+# Or explicitly call print
+print(result)
+
 }
