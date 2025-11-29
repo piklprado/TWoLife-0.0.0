@@ -29,10 +29,11 @@ devtools::install_github("DeFreitasLR/TWoLife-0.0.0")
 The package requires:
 - R >= 4.0.0
 - Rcpp
-- rflsgen (for fractal landscape generation)
 
 Optional for enhanced visualization:
 - viridisLite
+
+Note: Fractal landscape generation is implemented internally using base R functions.
 
 ## Quick Start
 
