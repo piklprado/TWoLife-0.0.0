@@ -30,11 +30,14 @@ knitr::opts_chunk$set(
 
 Understanding population dynamics in spatially heterogeneous
 environments requires modeling both landscape structure and individual
-variation. Existing approaches typically simplify one or both:
+variation. 
+<!-- Afirmação sem referência para fundamentar -->
+Existing approaches typically simplify one or both:
 agent-based models often assume discrete habitat types, while analytical
 models treat individuals as identical units. **TWoLife** integrates
 these dimensions by simulating populations as collections of genetically
 variable individuals inhabiting spatially complex landscapes.
+<!-- Vários conceitos que não estão definidos precisamente (e.g., ambientes espacialmente heterogêneos, estrutura de paisagem e variação individual) -->
 
 The package enables researchers to:
 
@@ -42,8 +45,10 @@ The package enables researchers to:
     **discrete habitat patches**
 2.  Model **individual genetic variation** in optimal values, tolerance
     ranges, and behavioral strategies
+<!-- parâmetros sem definição precisa: o que são optimal values etc?	 -->
 3.  Implement **evolutionary mechanisms** including mutation,
     plasticity, and selection
+<!-- Inconsistência conceitual. Neste caso porque estes apenas são mecanismos evolutivos? De maneira geral, avaliar se definições teóricas são usadas adequadamente	 -->
 4.  Track **phenotype-environment interactions** that determine fitness
     and spatial distribution
 5.  Analyze **emergent population dynamics** arising from
@@ -69,7 +74,7 @@ set.seed(42)
 ## Main Function
 
 TWoLife provides a single main function with three parameter groups:
-
+<!-- Sentença curta sem explicação suficiente para compreender os comandos que se seguem. Não tome os comandos e seus comentários no código como autoevidentes. -->
 ```{r eval=FALSE}
 twolife_simulation(
   landscape_params,     # Spatial environment configuration
@@ -132,7 +137,7 @@ classic SLOSS (Single Large or Several Small) conservation question.
 TWoLife provides `create_fractal_landscape()` for generating spatial
 patterns. For binary habitat/matrix landscapes, set `habitat_proportion`
 to the desired coverage:
-
+<!-- Explicação que precede o comando omite a definição e/ou explicação de alguns parâmetros -->
 ```{r sloss-landscapes}
 # Pristine: 100% habitat
 set.seed(100)
@@ -143,10 +148,12 @@ pristine_landscape <- create_fractal_landscape(
 )
 
 # Pre-configured SLOSS landscapes from package data
+## Comentários com explicações que deveriam estar no corpo do texto
 single_large_patch <- single_large      # 20% coverage, 1 patch
 several_small_patches <- several_small  # 20% coverage, multiple patches
 ```
 
+<!-- Chamada de comando sem nenhuma explicação do que está sendo feito, e dos parâmetros fundamentais usados -->
 ```{r visualize-sloss, fig.width=9, fig.height=3, echo=FALSE}
 par(mfrow = c(1, 3), mar = c(4, 4, 3, 2))
 plot_landscape(pristine_landscape, 
@@ -164,7 +171,7 @@ par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 ## Running Simulations
 
 The core function takes three parameter lists:
-
+<!-- Indicação de objetos (no caso listas), sem sua caracterização ou definição. -->
 ```{r sloss-simulations}
 sim_pristine <- twolife_simulation(
   landscape_params = list(habitat = pristine_landscape),
@@ -192,7 +199,7 @@ sim_several_small <- twolife_simulation(
 
 Simulation objects contain summary statistics and detailed event
 histories:
-
+<!-- descrição incompleta do que o comando está sendo realizando.  -->
 ```{r sloss-results}
 # Final population sizes
 final_pops <- c(
@@ -328,10 +335,10 @@ initial_genotypes <- runif(40, 0.3, 0.7)
 
 **Configuration:** All individuals identical (genotype = 1.0), zero
 tolerance.
-
+<!-- descrição de condições da simulação e sua relação com parâmetros que não está clara. Porque parâmetros não estão definidos nem se explica a relação entre seus valores e a condição teórica que isso implica -->
 **Hypothesis:** Population will collapse because the landscape lacks
 environmental values of exactly 1.0.
-
+<!-- Hipóteses ou afirmações apresentadas sem os elementos necessários para fundamentá-la -->
 ```{r scenario1}
 sim_s1 <- twolife_simulation(
   landscape_params = list(habitat = continuous_landscape),
@@ -351,7 +358,7 @@ matches to the required value of 1.0.
 
 **TWoLife enables:** Testing whether genetic uniformity is compatible
 with environmental heterogeneity without analytical approximations.
-
+<!-- Juízos de valor sem detalhamento e mais apropriados para uma discussão no paper. Dispensáveis numa vinheta. -->
 ## Scenario 2: Variable Specialists
 
 **Configuration:** Different genotypes (0.3–0.7), but still zero
@@ -469,7 +476,7 @@ landscapes and initial conditions.
 **Configuration:** Add `sampling_points = 100`, enabling individuals to
 evaluate 100 locations per dispersal and choose the best
 phenotype-environment match.
-
+<!-- Descrição de uso de parâmetro sem explicação suficiente do que esta parâmetro controla, e como (no caso a preferência de habitat) -->
 **Hypothesis:** Behavioral habitat selection will optimize spatial
 distribution and amplify genetic potential.
 
@@ -502,7 +509,7 @@ mechanistically explicit sampling and choice processes, demonstrating
 behavioral amplification of genetic traits.
 
 ## Comparative Analysis
-
+<!-- Apresnetação de gráfico ou tabela sem enhum texto explicativo deste elemento de resultado -->
 ```{r comparative-summary}
 # Summary table
 results_summary <- data.frame(
@@ -562,7 +569,7 @@ verify that survivors occupy environmentally suitable locations. The
 function displays the landscape with survivor positions colored by
 phenotype, alongside a scatterplot of phenotype versus occupied
 environmental values.
-
+<!-- Descrição incorreta ou imprecisa. No caso um scatterplot de phebotypo versus valores ambientais ocupados deveria ter esta segunda variável no eixo do X, o que não acontece -->
 ```{r validation-s3, fig.width=8, fig.height=4}
 # Scenario 3: Tolerance
 if (pop_s3 > 0) {
@@ -642,7 +649,7 @@ that TWoLife correctly implements the fitness model.
 ## Object Structure
 
 Simulation objects are lists with four main components:
-
+<!-- Repetição de informação já fornecida em outra seção -->
 ```{r output-structure}
 # Examine structure
 names(sim_s5)
@@ -652,7 +659,7 @@ sim_s5$summary
 ```
 
 ## Accessing Components
-
+<!-- Seções inteiras apenas com códigos, sem explicações do que é feito. Um caso extremos de blocos de código sem explicação ou com explicação insuficiente -->
 ```{r accessing-components}
 # Individual-level data
 if (isTRUE(!is.null(sim_s5$survivors) && is.data.frame(sim_s5$survivors) && nrow(sim_s5$survivors) > 0)) {
