@@ -18,7 +18,6 @@ NULL
 #' Runs a spatially-explicit individual-based simulation with habitat selection,
 #' genetic variation, phenotypic plasticity, and demographic processes. Supports
 #' rectangular landscapes and customizable habitat selection parameters.
-<<<<<<< HEAD
 #'
 #' @param landscape_params List containing landscape parameters:
 #'   \describe{
@@ -233,55 +232,7 @@ NULL
 #'}
 #'     \item{initial_x_coordinates}{Numeric vector. Custom x-coordinates for initial individual positions. Required if initial_placement_mode = 3. Length must equal initial_population_size.}
 #'     \item{initial_y_coordinates}{Numeric vector. Custom y-coordinates for initial individual positions. Required if initial_placement_mode = 3. Length must equal initial_population_size.}
-=======
-#' 
-#' @param landscape_params List containing landscape parameters. Required components:
-#'   \describe{
-#'     \item{habitat}{Matrix. Binary (0/1) or continuous habitat values. Required.}
-#'     \item{cell_size}{Numeric. Size of each landscape cell. Default: 1.0}
-## O default de parâmtros das funções não é declarado na seção de argumentos, mas sim na seção usage. Isso está na documentação do site do R sobre como se deve preparar help pages. Importante que vc leia isso com muita atenção.
-#'     \item{boundary_condition}{Integer. Boundary behavior: 1 = reflective (individuals bounce 
-#'       back into landscape), 2 = absorbing (individuals leave and are removed, generating 
-#'       emigration events), 3 = periodic (individuals wrap to opposite edge, torus topology). 
-#'       Default: 1} 
-## Creio que boundary behavior é impreciso, pq não explica comportamento em relação a que. E me parece mais preciso explicar que é comportamento dos indivíduos quando alcançam a boundary, correto? Importante tb neste e demais casos indicar para o usuário verificar informações adicionais na seção details, se lá tem mais informações sobre um argumento.
-#' \item{density_type}{Integer. Density calculation: 1 = local (within neighbor_radius), 
-#'       2 = global (entire population). Default: 1} 
-# tente se colocar no lugar da pessoa que abriu este help pela primeira vez. Como ela vai saber o que é cálculo de densidade? Que cálculo? densidade de quê? para que propósito?
-#' \item{matrix_mortality_multiplier}{Numeric. Mortality multiplier for matrix cells (habitat=0). 
-#'       Values > 1 increase mortality in matrix. Default: 2.0}
-#'     \item{matrix_dispersal_multiplier}{Numeric. Dispersal multiplier for matrix cells. 
-#'       Values < 1 reduce movement in matrix (movement costs). Default: 0.5}
 #'   }
-#' @param individual_params List containing individual-level parameters:
-#'   \describe{
-#'     \item{initial_population_size}{Integer. Starting population size. Default: 200}
-#'     \item{neighbor_radius}{Numeric. Radius for density calculations (world units). Default: 2.0}
-## que densidade? que cálculos? 
-#'     \item{vision_angle}{Numeric. Vision angle in radians for movement decisions. 
-#'       pi (180 degrees) = forward hemisphere, 2*pi (360 degrees) = random walk. Default: pi}
-# ângulo de visão de quem? para que? o que são movement decisions?
-#'     \item{step_length}{Numeric. Distance moved per dispersal event (world units). Default: 1.0}
-# Evento de dispersãos eria o evento de dar um passo? S eé isso sugiro não usar o termo dispersão, que em geral evoca mudança de área de vida. 
-#'     \item{base_dispersal_rate}{Numeric. Base dispersal probability per time unit (0-1). Default: 0.1}
-# Incompreensível sem mais contexto
-#'     \item{base_birth_rate}{Numeric. Base birth probability per time unit (0-1). 
-#'       Should typically be > base_mortality_rate for population persistence. Default: 0.3}
-# idem 
-#'     \item{base_mortality_rate}{Numeric. Base mortality probability per time unit (0-1). Default: 0.20}
-# Idem.
-#'     \item{birth_density_slope}{Numeric. Density-dependence slope for births (negative effect). Default: 0.02}
-# Idem. Para que o usuário entenda os parâmetros demográficos, sugir que vc inclua nos details a explicação de como cada um é calculado, definindo aí cada um dos parâmetros que afeta este cálculo (mortalidade máxima, inlciançãod a relação entre taxa de nascimentos e densidade, raio da densidade, ext).
-#'     \item{mortality_density_slope}{Numeric. Density-dependence slope for mortality (positive effect). Default: 0.02}
-# idem 
-#'     \item{initial_placement_mode}{Integer. Placement strategy: 1 = random in habitat cells, 
-#'       2 = random anywhere with normal distribution around center, 3 = custom coordinates. Default: 1}
-# placement do que ?
-#'     \item{initial_x_coordinates}{Numeric vector. Custom x positions (required if initial_placement_mode = 3)} 
-#'     \item{initial_y_coordinates}{Numeric vector. Custom y positions (required if initial_placement_mode = 3)}
->>>>>>> 4afac4b792b65b455e8fd95c49ea7ef1bad0ee72
-#'   }
-# Posições x e Y do que? 
 #' @param genetic_params List containing genetic parameters (each can be single value or vector matching initial_population_size):
 #'   \describe{
 #'     \item{genotype_means}{Numeric. The underlying genetic optimum value(s) for each individual. Represents the habitat value at which fitness is maximized. Should be on the same scale as habitat values.
@@ -543,11 +494,7 @@ NULL
 #'     \item 2: Movement (dispersal within landscape)
 #'     \item 3: Emigration (exit through absorbing boundary)
 #'   }
-<<<<<<< HEAD
 #'
-=======
-## Está faltando a seção usage. Veja a referência do site do R para helps de função. 
->>>>>>> 4afac4b792b65b455e8fd95c49ea7ef1bad0ee72
 #' @examples
 #' # Quick example for CRAN checks (< 2 seconds)
 #' set.seed(100)
@@ -611,14 +558,8 @@ NULL
 #' }
 #'
 #' @export
-<<<<<<< HEAD
 twolife_simulation <- function(landscape_params = list(),
                                individual_params = list(),
-=======
-
-twolife_simulation <- function(landscape_params = list(), 
-                               individual_params = list(), 
->>>>>>> 4afac4b792b65b455e8fd95c49ea7ef1bad0ee72
                                genetic_params = list(),
                                simulation_params = list(),
                                history_detail = "standard",
