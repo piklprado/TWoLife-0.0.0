@@ -151,4 +151,5 @@
 #' @aliases TWoLife-package
 #' @useDynLib TWoLife, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
+#' @importFrom mathjaxr preview_rd
 "_PACKAGE"

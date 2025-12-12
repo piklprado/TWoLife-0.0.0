@@ -14,89 +14,317 @@ twolife_simulation(
 )
 }
 \arguments{
-\item{landscape_params}{List containing landscape parameters. Required component:
-\describe{
-  \item{habitat}{Matrix. Binary (0/1) or continuous habitat values. Required.}
-  \item{cell_size}{Numeric. Size of each landscape cell. Default: 1.0}
-  \item{boundary_condition}{Integer. Boundary behavior: 1 = reflective (individuals bounce 
-    back into landscape), 2 = absorbing (individuals leave and are removed, generating 
-    emigration events), 3 = periodic (individuals wrap to opposite edge, torus topology). 
-    Default: 1}
-  \item{density_type}{Integer. Density calculation: 1 = local (within neighbor_radius), 
-    2 = global (entire population). Default: 1}
-  \item{matrix_mortality_multiplier}{Numeric. Mortality multiplier for matrix cells (habitat=0). 
-    Values > 1 increase mortality in matrix. Default: 2.0}
-  \item{matrix_dispersal_multiplier}{Numeric. Dispersal multiplier for matrix cells. 
-    Values < 1 reduce movement in matrix (movement costs). Default: 0.5}
-}}
+\item{landscape_params}{List containing landscape parameters:
+  \describe{
+    \item{habitat}{Matrix (numeric). World Habitat Pixel Matrix. Binary (0/1) or continuous habitat values (0 to 1). Each pixel represents an environmental quality value at that location. Individuals experience fitness effects based on how well their phenotype matches the habitat value of their current location. Matrix dimensions define the landscape grid resolution. Required.}
+    \item{cell_size}{Numeric. Length of the side of a landscape cell in world units. Defines the spatial resolution of the landscape. If habitat is a 100x100 matrix and cell_size = 1.0, the simulated world dimensions are 100x100 world units (world_width = 100, world_height = 100). All spatial parameters (step_length, neighbor_radius, coordinates) use these same world units. Individuals have continuous (x,y) coordinates and are not restricted to cell centers.}
+    \item{boundary_condition}{Integer. Defines what happens to individuals attempting to move beyond world edges:
+      \itemize{
+        \item 1 = reflective: individuals attempting to move beyond the boundary bounce back into the landscape at the mirror position and remain in the simulation
+        \item 2 = absorbing: individuals moving beyond the boundary permanently exit the simulation and are removed from the population, generating emigration events (recorded as event type = 3)
+        \item 3 = periodic: individuals moving beyond one edge wrap to the opposite edge, creating torus topology (infinite landscape approximation)
+      }
+}
+    \item{density_type}{Integer. Determines how population density is calculated for density-dependent demographic processes:
+      \itemize{
+        \item 1 = local: density calculated as number of individuals within neighbor_radius distance of the focal individual, divided by circular area (\pi \times neighbor_radius^2). Represents spatially-explicit local competition (territoriality, local resource depletion).
+        \item 2 = global: density calculated as total population size divided by total landscape area (world_width \times world_height). Represents population-wide resource limitation.
+      }
+      Mathematical formulas:
+      \itemize{
+        \item Local density: density_local = N_neighbors / (\pi \times neighbor_radius^2)
+        \item Global density: density_global = N_total / (world_width \times world_height)
+      }
+      This density value is then used in birth and mortality rate calculations via birth_density_slope and mortality_density_slope parameters.}
+    \item{matrix_mortality_multiplier}{Numeric. Mortality rate multiplier applied based on habitat suitability. Controls how mortality scales from optimal to unsuitable habitat. Values > 1 increase mortality in poor-quality habitat, creating "hostile matrix" effects.
+
+      Mathematical application depends on whether individuals are perfect specialists or generalists:
+
+      For perfect specialists (genotype_sds = 0):
+
+      If individual is in exactly optimal habitat (habitat_value = environmental_optimum):
+
+      mortality = base_mortality_rate + mortality_density_slope \times density
+
+      If individual is NOT in optimal habitat (matrix):
+
+      mortality = matrix_mortality_multiplier \times base_mortality_rate + mortality_density_slope \times density
+
+      For generalists (genotype_sds > 0):
+
+      Mortality is interpolated based on habitat quality fitness:
+
+      mortality = mortality_max - (fitness_relative \times (mortality_max - mortality_min))
+
+      Where:
+      \itemize{
+        \item mortality_max = matrix_mortality_multiplier \times base_mortality_rate
+        \item mortality_min = base_mortality_rate
+        \item fitness_relative = ratio of fitness at current habitat to fitness at optimal habitat (ranges from 0 to 1)
+      }
+      This creates a smooth gradient where mortality increases as habitat quality decreases, with the multiplier setting the maximum mortality in a completely unsuitable habitat.
+
+}
+    \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events (not the distance per event) in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it.
+
+      Mathematical application (for perfect specialists with genotype_sds = 0):
+
+      If individual is in exactly optimal habitat:
+
+      dispersal_rate = base_dispersal_rate
+
+      If individual is NOT in optimal habitat (matrix):
+
+      dispersal_rate = matrix_dispersal_multiplier \times base_dispersal_rate
+
+      For generalists (genotype_sds > 0), dispersal rate is not modified by habitat quality and remains at base_dispersal_rate.
+
+      Important: This multiplier affects the rate (probability per time unit) of dispersal events occurring, NOT the distance moved per event. The step_length remains constant regardless of habitat quality. The dispersal rate is used in the Gillespie algorithm to determine when dispersal events occur.
+
+}
+  }}
 
 \item{individual_params}{List containing individual-level parameters:
-\describe{
-  \item{initial_population_size}{Integer. Starting population size. Default: 200}
-  \item{neighbor_radius}{Numeric. Radius for density calculations (world units). Default: 2.0}
-  \item{vision_angle}{Numeric. Vision angle in radians for movement decisions. 
-    pi (180 degrees) = forward hemisphere, 2*pi (360 degrees) = random walk. Default: pi}
-  \item{step_length}{Numeric. Distance moved per dispersal event (world units). Default: 1.0}
-  \item{base_dispersal_rate}{Numeric. Base dispersal probability per time unit (0-1). Default: 0.1}
-  \item{base_birth_rate}{Numeric. Base birth probability per time unit (0-1). 
-    Should typically be > base_mortality_rate for population persistence. Default: 0.3}
-  \item{base_mortality_rate}{Numeric. Base mortality probability per time unit (0-1). Default: 0.20}
-  \item{birth_density_slope}{Numeric. Density-dependence slope for births (negative effect). Default: 0.02}
-  \item{mortality_density_slope}{Numeric. Density-dependence slope for mortality (positive effect). Default: 0.02}
-  \item{initial_placement_mode}{Integer. Placement strategy: 1 = random in habitat cells, 
-    2 = random anywhere with normal distribution around center, 3 = custom coordinates. Default: 1}
-  \item{initial_x_coordinates}{Numeric vector. Custom x positions (required if initial_placement_mode = 3)}
-  \item{initial_y_coordinates}{Numeric vector. Custom y positions (required if initial_placement_mode = 3)}
-}}
+  \describe{
+    \item{initial_population_size}{Integer. Number of individuals at simulation start.}
+    \item{neighbor_radius}{Numeric. Distance (in world units) within which other individuals are counted as neighbors for local density calculations. Only used when density_type = 1 (local).
+
+      Mathematical application:
+
+      density_local = N_neighbors / (\pi \times neighbor_radius^2)
+
+}
+    \item{vision_angle}{Numeric. Angular range (in radians) within which an individual can change direction during dispersal.
+
+      Mathematical application:
+
+      When performing random walk dispersal (sampling_points = 0), the individual's bearing is updated by adding a random angle uniformly sampled from [-vision_angle/2, vision_angle/2]:
+
+      new_bearing = current_bearing + Uniform(-vision_angle/2, vision_angle/2)
+
+      Then movement occurs:
+
+      dx = cos(new_bearing) \times step_length
+
+      dy = sin(new_bearing) \times step_length
+
+}
+    \item{step_length}{Numeric. Maximum distance (in world units) an individual moves during each dispersal event.
+
+      Mathematical application:
+
+      For random walk (sampling_points = 0), the individual moves exactly this distance in the chosen direction.
+
+      For habitat selection (sampling_points > 0), candidate locations are sampled uniformly within a circle of radius step_length around the current position:
+
+      distance ~ Uniform(0, step_length)
+
+      angle ~ Uniform(0, 2pi)
+
+      candidate_x = current_x + cos(angle) \times distance
+
+      candidate_y = current_y + sin(angle) \times distance
+
+}
+    \item{base_dispersal_rate}{Numeric. Baseline probability per time unit that a dispersal event occurs (range: 0-1). Modified by habitat quality for perfect specialists (genotype_sds = 0) via matrix_dispersal_multiplier.}
+    \item{base_birth_rate}{Numeric. Baseline probability per time unit that a birth event occurs (range: 0-1).
+
+      Mathematical application:
+
+      For specialists (genotype_sds = 0) in optimal habitat:
+
+      birth_rate = base_birth_rate - birth_density_slope \times density
+
+      For specialists in non-optimal habitat:
+
+      birth_rate = 0
+
+      For generalists (genotype_sds > 0):
+
+      birth_rate = base_birth_rate - birth_density_slope \times density
+
+      Birth rate is set to 0 if the calculation yields a negative value.
+
+}
+    \item{base_mortality_rate}{Numeric. Baseline probability per time unit that a mortality event occurs (range: 0-1). Mathematical application shown in matrix_mortality_multiplier parameter.}
+    \item{birth_density_slope}{Numeric. Controls the strength of negative density-dependence on birth rate. Higher values cause birth rate to decrease more rapidly as local density increases.
+
+      Mathematical application:
+
+      birth_rate = base_birth_rate - birth_density_slope \times density
+
+}
+    \item{mortality_density_slope}{Numeric. Controls the strength of positive density-dependence on mortality rate. Higher values cause mortality rate to increase more rapidly as local density increases.
+
+      Mathematical application (for specialists in optimal habitat):
+
+      mortality_rate = base_mortality_rate + mortality_density_slope \times density
+
+}
+    \item{initial_placement_mode}{Integer. Determines how individuals are positioned at simulation start:
+      \itemize{
+        \item 1 = random placement
+        \item 2 = random placement anywhere with bivariate normal distribution centered on landscape center, with SD = sqrt(base_dispersal_rate) \times step_length
+        \item 3 = custom coordinates (requires initial_x_coordinates and initial_y_coordinates)
+      }
+}
+    \item{initial_x_coordinates}{Numeric vector. Custom x-coordinates for initial individual positions. Required if initial_placement_mode = 3. Length must equal initial_population_size.}
+    \item{initial_y_coordinates}{Numeric vector. Custom y-coordinates for initial individual positions. Required if initial_placement_mode = 3. Length must equal initial_population_size.}
+  }}
 
 \item{genetic_params}{List containing genetic parameters (each can be single value or vector matching initial_population_size):
-\describe{
-  \item{genotype_means}{Numeric. Mean genotype values (underlying genetic optimum). Default: 1}
-  \item{genotype_sds}{Numeric. Standard deviations (niche width - tolerance to habitat mismatch). 
-    Smaller values = specialist, larger values = generalist. Default: 0}
-  \item{mutation_rates}{Numeric. Per-birth mutation rate (SD of normal distribution added to 
-    offspring genotype). Higher values = more genetic variation between generations. Default: 0}
-  \item{plasticities}{Numeric. Phenotypic plasticity (SD of normal distribution added to 
-    individual phenotype from genotype). Higher values = more phenotypic variation from environment. 
-    Works similarly to mutation_rates but affects phenotype expression rather than inheritance. Default: 0}
-  \item{sampling_points}{Integer. Number of habitat locations sampled for plasticity calculation. 
-    Higher values = more accurate environmental assessment but slower. Only relevant if plasticities > 0. 
-    Default: 0}
-  \item{habitat_selection_temperatures}{Numeric. Temperature parameter for softmax habitat selection 
-    (must be positive). Controls selection strength during dispersal: Lower values (< 1) = strong 
-    selection (nearly always choose best habitat), higher values (> 1) = weak selection (more 
-    exploration/randomness), 1 = balanced (probability of choosing habitat proportional to its 
-    relative fitness). Default: 1.0}
-}}
+  \describe{
+    \item{genotype_means}{Numeric. The underlying genetic optimum value(s) for each individual. Represents the habitat value at which fitness is maximized. Should be on the same scale as habitat values.
+
+      Mathematical application:
+
+      Fitness is calculated using a Gaussian (normal) function:
+
+      fitness = (1 / (genotype_sds \times sqrt(2\pi))) \times exp(-((habitat_value - phenotype)^2 / (2 \times genotype_sds^2)))
+
+      Where phenotype is derived from genotype_means (see plasticities parameter).
+
+      Can be:
+      \itemize{
+        \item Single value: all individuals start with the same genotype
+        \item Vector: each individual starts with a different genotype
+      }
+
+}
+    \item{genotype_sds}{Numeric. Standard deviation parameter of the Gaussian fitness function. Determines tolerance to habitat mismatch (niche width).
+
+      Fitness function:
+
+      fitness = (1/(genotype_sds \times sqrt(2\pi))) \times exp(-((habitat_value - phenotype)^2 / (2 \times genotype_sds^2)))
+
+      Effect on fitness:
+      \itemize{
+        \item genotype_sds = 0: Perfect specialist. Fitness = 1 only when habitat_value exactly equals phenotype, otherwise fitness = 0. Enables matrix_dispersal_multiplier effects.
+        \item genotype_sds > 0: Generalist. Fitness decreases gradually as distance from optimal habitat increases. Larger values = broader tolerance.
+      }
+
+}
+    \item{mutation_rates}{Numeric. Standard deviation of mutations added to offspring genotype at each birth event.
+
+      Mathematical application:
+
+      offspring_genotype = parent_genotype + Normal(mean=0, sd=mutation_rate)
+
+      Effect:
+      \itemize{
+        \item mutation_rate = 0: No mutation, offspring genotype identical to parent
+        \item mutation_rate > 0: Offspring genotype varies from parent, enabling evolution
+      }
+
+}
+    \item{plasticities}{Numeric. Standard deviation of the normal distribution from which phenotypic noise is drawn. Controls non-heritable phenotypic variation within an individual's lifetime.
+
+      Mathematical application:
+
+      At birth (once per individual, not changing during lifetime):
+
+      phenotype = genotype + Normal(0, plasticity)
+
+      Difference from mutation:
+      \itemize{
+        \item Mutation: affects offspring genotype (heritable)
+        \item Plasticity: affects individual phenotype (not heritable, determined once at birth)
+      }
+
+      The phenotype is then used in fitness calculations and habitat selection, while genotype is passed to offspring.
+
+}
+    \item{sampling_points}{Integer. Number of candidate locations sampled within step_length distance during each dispersal event when performing habitat selection.
+
+      Mathematical application:
+
+      When sampling_points = 0:
+      \itemize{
+        \item Individual performs simple random walk (vision_angle-constrained movement)
+        \item No habitat selection occurs
+      }
+
+      When sampling_points > 0:
+      \itemize{
+        \item Individual samples sampling_points random locations within step_length radius
+        \item Habitat quality evaluated at each candidate location
+        \item Final location chosen via habitat selection using habitat_selection_temperature parameter
+        \item Larger values = more informed habitat choice but slower computation
+      }
+
+      Only relevant when plasticities > 0 or when habitat selection is desired.}
+    \item{habitat_selection_temperatures}{Numeric. Temperature parameter for the softmax function used in habitat selection. Controls the strength of preference for high-quality habitat during dispersal. Must be positive.
+
+      Mathematical application:
+
+      When choosing among candidate locations (sampling_points > 0), the probability of selecting location i is:
+
+      P(location_i) = exp(fitness_i / temperature) / sum_j exp(fitness_j / temperature)
+
+      Where fitness is calculated from the Gaussian fitness function.
+
+      Effect of temperature values:
+      \itemize{
+        \item temperature < 1: Strong selection, nearly deterministic choice of best habitat
+        \item temperature = 1: Balanced selection, probability proportional to relative fitness
+        \item temperature > 1: Weak selection, more random exploration
+      }
+
+      Example: If two locations have fitness 0.8 and 0.4 with temperature = 1, the better location is chosen with probability exp(0.8) / (exp(0.8) + exp(0.4)) approximately 0.60.
+
+}
+  }}
 
 \item{simulation_params}{List containing simulation control parameters:
-\describe{
-  \item{max_events}{Integer. Maximum number of events to simulate. Default: 50 * initial_population_size}
-  \item{neutral_mode}{Logical. If TRUE, disables habitat selection (all locations equally preferred, 
-    and all individuals are assigned the average genotype of the initial population). Useful for 
-    null model comparisons to test effects of habitat selection. Default: FALSE}
-}}
+  \describe{
+    \item{max_events}{Integer. Maximum number of events to simulate before stopping.
 
-\item{history_detail}{Character. Level of event history detail to record.
-Options: "minimal" (only time, event type, individual ID - fastest, smallest memory),
-"standard" (adds spatial coordinates, patch ID, genotype - enables most analyses),
-"full" (adds phenotype and niche width - enables exact historical reconstruction).
-Default: "standard"}
+      An "event" is any demographic or movement action: birth, death, dispersal, or emigration. The simulation uses a Gillespie algorithm where time advances stochastically between events.
 
-\item{master_seed}{Integer. Seed for reproducible simulations. If NULL, results are stochastic. Default: NULL}
+      Time advancement between events:
+
+      Delta t ~ Exponential(rate = sum(all individual rates))
+
+      Where individual rates = dispersal_rate + birth_rate + death_rate for each individual.
+
+      The simulation processes events sequentially until max_events is reached, population goes extinct, or population exceeds 1,000,000.
+
+}
+    \item{neutral_mode}{Logical. If TRUE, disables habitat selection and genetic variation to create a neutral null model.
+
+      Effects when neutral_mode = TRUE:
+      \itemize{
+        \item All individuals assigned the mean genotype of the initial population
+        \item Habitat selection disabled (all locations equally preferred)
+        \item Useful for null model comparisons to isolate effects of habitat selection and evolution
+      }
+
+}
+  }}
+
+\item{history_detail}{Character. Level of detail recorded in event history. Higher detail levels enable more analyses but use more memory.
+
+  Options:
+  \itemize{
+    \item "minimal": Records only time, event type, and individual ID. Fastest, smallest memory footprint. Sufficient for population size trajectories.
+    \item "standard": Adds spatial coordinates (x, y), patch ID, and genotype for each event. Enables spatial and genetic analyses. Recommended for most uses.
+    \item "full": Adds phenotype and niche width (genotype_sds) for each event. Enables complete historical reconstruction. Use when analyzing plasticity or detailed evolutionary dynamics.
+  }}
+
+\item{master_seed}{Integer. Random seed for reproducible simulations. If NULL, results are stochastic.}
 }
 \value{
 A list of class 'twolife_result' with components:
   \describe{
-    \item{summary}{List with status ("surviving" or "extinct"), final_population_size (integer), 
+    \item{summary}{List with status ("surviving" or "extinct"), final_population_size (integer),
       total_events (integer), and duration (numeric time units)}
-    \item{survivors}{Data frame with columns: id (integer), x (numeric), y (numeric), 
+    \item{survivors}{Data frame with columns: id (integer), x (numeric), y (numeric),
       genotype (numeric), phenotype (numeric), width (numeric). Empty data frame if extinct.}
-    \item{spatial}{List containing world_width (numeric), world_height (numeric), 
+    \item{spatial}{List containing world_width (numeric), world_height (numeric),
       world_size (numeric, maximum dimension: max(world_width, world_height)), num_patches (integer)}
     \item{events}{List with event history. Content depends on history_detail:
       \itemize{
-        \item Always included: times (numeric vector), types (integer vector: -1=initial, 0=death, 
+        \item Always included: times (numeric vector), types (integer vector: -1=initial, 0=death,
           1=birth, 2=movement, 3=emigration), individual_ids (integer vector)
         \item If history_detail is "standard" or "full": patch_ids, x_coordinates, y_coordinates, genotypes
         \item If history_detail == "full": phenotypes, widths
@@ -106,51 +334,36 @@ A list of class 'twolife_result' with components:
 }
 \description{
 Runs a spatially-explicit individual-based simulation with habitat selection,
-genetic variation, phenotypic plasticity, and demographic processes. Supports 
+genetic variation, phenotypic plasticity, and demographic processes. Supports
 rectangular landscapes and customizable habitat selection parameters.
 }
 \details{
-Simulation Stopping Conditions:
-  The simulation automatically stops when any of these conditions is met:
+Simulation Algorithm:
+  The simulation uses a Gillespie algorithm (stochastic simulation algorithm) where:
+  \enumerate{
+    \item Each individual has rates for three possible events: birth, death, and dispersal
+    \item Time advances exponentially: Delta t ~ Exp(sum all_rates)
+    \item One event occurs per time step, chosen proportionally to rates
+    \item Individual rates update after density or location changes
+  }
+
+Stopping Conditions:
+  The simulation stops when:
   \itemize{
     \item Population reaches 0 (extinction)
     \item Population exceeds 1,000,000 individuals (overflow protection)
     \item max_events is reached
   }
-  Users can interrupt long simulations with Ctrl+C or Esc. The simulation checks 
-  for user interrupts every 1000 events.
-
-Genetic Architecture:
-  The model implements a quantitative genetics framework:
-  \itemize{
-    \item Genotype: Underlying genetic optimum (heritable, passed to offspring with mutation)
-    \item Mutation: Offspring genotype = parent genotype + N(0, mutation_rate)
-    \item Phenotype: Expressed optimum = genotype + N(0, plasticity), where N(0, plasticity) 
-      is random normal variation representing environmental influence
-    \item Niche width (genotype_sds): Determines fitness specialism via Gaussian fitness function. 
-      Smaller values create specialists (fitness drops sharply away from optimum), larger values 
-      create generalists (fitness remains high across wider habitat range).
-  }
-  Higher fitness increases birth rate and decreases mortality rate relative to habitat quality.
-  Mutation affects inheritance (parent to offspring), while plasticity affects individual 
-  phenotype expression within a generation.
-
-Boundary Conditions:
-  When individuals move beyond landscape edges:
-  \itemize{
-    \item Reflective (1): Individual bounces back, remains in simulation
-    \item Absorbing (2): Individual exits permanently (emigration event, type = 3)
-    \item Periodic (3): Individual wraps to opposite edge (torus topology)
-  }
+  User interruption via Ctrl+C or Esc is checked every 1000 events.
 
 Event Types:
-  Event history records these event types:
+  Events are recorded with integer type codes:
   \itemize{
-    \item -1: Initial placement
-    \item 0: Death (natural or density-dependent)
-    \item 1: Birth (reproduction)
+    \item -1: Initial placement (simulation start)
+    \item 0: Death
+    \item 1: Birth
     \item 2: Movement (dispersal within landscape)
-    \item 3: Emigration (boundary crossing with absorbing boundaries)
+    \item 3: Emigration (exit through absorbing boundary)
   }
 }
 \examples{

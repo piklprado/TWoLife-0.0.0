@@ -16,7 +16,7 @@ Common options include: point_size, point_color, color_by, landscape_colors, mai
 The input object \code{x}, invisibly
 }
 \description{
-Generic plot method for twolife_result objects. Calls 
+Generic plot method for twolife_result objects. Calls
 \code{\link{plot_simulation_on_landscape}} with convenient syntax.
 }
 \examples{

@@ -22,24 +22,23 @@ plot_landscape(
 }}
 
 \item{cell_size}{Numeric. Size of each landscape cell in world units. Should match
-the cell_size used in simulations. Default: 1.0}
+the cell_size used in simulations.}
 
 \item{filename}{Character. Optional file path to save plot (e.g., "landscape.png").
-If NULL, displays interactively. Default: NULL}
+If NULL, displays interactively.}
 
-\item{main}{Character. Plot title. Default: "Landscape (World Coordinates)"}
+\item{main}{Character. Plot title.}
 
 \item{colors}{Character. Color scheme:
 \itemize{
   \item "habitat" - Green gradient (white=matrix, dark green=high quality habitat)
   \item "terrain" - Built-in terrain.colors palette
   \item "viridis" - Viridis color scale (requires viridisLite package)
-}
-Default: "habitat"}
+}}
 
-\item{show_legend}{Logical. Whether to show color legend. Default: TRUE}
+\item{show_legend}{Logical. Whether to show color legend.}
 
-\item{add_grid}{Logical. If TRUE, adds grid lines and crosshairs at origin. Default: TRUE}
+\item{add_grid}{Logical. If TRUE, adds grid lines and crosshairs at origin.}
 }
 \value{
 NULL, invisibly. Function is called for its side effect (plotting).

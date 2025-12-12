@@ -9,7 +9,7 @@ habitat_mismatch(simulation_result, return_individuals = FALSE)
 \arguments{
 \item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{return_individuals}{Logical. If TRUE, includes individual-level data in output. Default: FALSE}
+\item{return_individuals}{Logical. If TRUE, includes individual-level data in output.}
 }
 \value{
 A list of class 'genotype_habitat_mismatch' with components:
@@ -41,7 +41,7 @@ A list of class 'genotype_habitat_mismatch' with components:
       Contains columns: id, x, y, genotype, phenotype, width, habitat_value, fitness,
       absolute_mismatch, raw_mismatch, row_index, col_index}
   }
-  
+
   The object has a custom print method that displays formatted statistics.
 }
 \description{
@@ -54,11 +54,11 @@ Fitness Calculation:
   This function uses the same fitness formula that determines demographic rates during
   the simulation. Fitness quantifies how well an individual's phenotype matches the
   habitat quality at its location.
-  
+
   For generalists (niche_width > 0):
-  
+
   \deqn{fitness = exp\left(-\frac{(phenotype - habitat)^2}{2 \times niche\_width^2}\right)}
-  
+
   Where:
   \itemize{
     \item phenotype = individual's expressed trait value (genotype + plasticity)
@@ -66,11 +66,11 @@ Fitness Calculation:
     \item niche_width = genotype_sds parameter (tolerance to mismatch)
     \item fitness ranges from 0 (complete mismatch) to 1 (perfect match)
   }
-  
+
   For perfect specialists (niche_width = 0):
-  
+
   \deqn{fitness = 1 \text{ if } |phenotype - habitat| < 0.001, \text{ otherwise } fitness = 0}
-  
+
   This binary fitness function means specialists only survive in exactly matching habitat.
 
 Fitness Interpretation:
@@ -81,7 +81,7 @@ Fitness Interpretation:
     \item fitness < 0.5: Low fitness. More than 2 niche widths from optimum.
     \item fitness = 0.368 (1/e): Exactly 1 niche width from optimum (Gaussian inflection point).
   }
-  
+
   Example: If niche_width = 0.2 and phenotype = 0.5:
   \itemize{
     \item habitat = 0.5 -> fitness = 1.0 (perfect)
@@ -92,16 +92,16 @@ Fitness Interpretation:
 Connection to Simulation Demography:
   During simulation, this fitness value affects demographic rates. For generalists
   (genotype_sds > 0), the mortality rate is interpolated based on fitness:
-  
+
   \deqn{mortality = mortality_{max} - (fitness_{relative} \times (mortality_{max} - mortality_{min}))}
-  
+
   Where:
   \itemize{
     \item \eqn{mortality_{max} = matrix\_mortality\_multiplier \times base\_mortality\_rate}
     \item \eqn{mortality_{min} = base\_mortality\_rate}
     \item \eqn{fitness_{relative}} = fitness at current habitat / fitness at optimal habitat
   }
-  
+
   Higher fitness leads to lower mortality rate, higher birth rate (for generalists),
   and greater probability of leaving offspring.
 }

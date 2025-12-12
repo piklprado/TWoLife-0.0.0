@@ -29,9 +29,11 @@ Imports:
     stats,
     graphics,
     grDevices,
-    utils
+    utils,
+    mathjaxr
 LinkingTo: 
     Rcpp
+RdMacros: mathjaxr
 Suggests: 
     testthat (>= 3.0.0),
     knitr,

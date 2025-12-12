@@ -17,23 +17,22 @@ check_habitat_match(
 \arguments{
 \item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{main}{Character. Plot title. If NULL, automatically generated. Default: NULL}
+\item{main}{Character. Plot title. If NULL, automatically generated.}
 
-\item{point_size}{Numeric. Size of points in scatter plot. Default: 2}
+\item{point_size}{Numeric. Size of points in scatter plot.}
 
-\item{landscape_colors}{Character. Color scheme for landscape background. 
-Options: "habitat", "terrain", "viridis". Default: "terrain"}
+\item{landscape_colors}{Character. Color scheme for landscape background.
+Options: "habitat", "terrain", "viridis".}
 
 \item{color_by}{Character. Which trait to analyze:
 \itemize{
   \item "genotype" - Analyze genotype-habitat matching
   \item "phenotype" - Analyze phenotype-habitat matching (recommended for plasticity)
-}
-Default: "phenotype"}
+}}
 
-\item{show_stats}{Logical. If TRUE, prints statistical summary to console. Default: TRUE}
+\item{show_stats}{Logical. If TRUE, prints statistical summary to console.}
 
-\item{show_legend}{Logical. If TRUE, displays color legend on plot. Default: TRUE}
+\item{show_legend}{Logical. If TRUE, displays color legend on plot.}
 }
 \value{
 Invisibly returns a data frame with columns:
@@ -66,21 +65,21 @@ What This Function Measures:
 
 Mathematical Basis:
   Calculates Pearson correlation coefficient:
-  
+
   \deqn{r = \frac{Cov(trait, habitat)}{SD_{trait} \times SD_{habitat}}}
-  
+
   Where:
   \itemize{
     \item trait = genotype or phenotype values of survivors
     \item habitat = habitat quality values at survivor locations
     \item r ranges from -1 (perfect negative correlation) to +1 (perfect positive correlation)
   }
-  
+
   Also provides Spearman rank correlation (robust to outliers and non-linear relationships).
 
 Visualization Components:
   Creates a two-panel plot:
-  
+
   Left panel - Spatial distribution:
   \itemize{
     \item Shows landscape with habitat quality as background color
@@ -88,7 +87,7 @@ Visualization Components:
     \item Good matching: point colors visually match background colors
     \item Poor matching: points of one color scattered across all background colors
   }
-  
+
   Right panel - Correlation plot:
   \itemize{
     \item X-axis: habitat value at individual location (0 to 1)

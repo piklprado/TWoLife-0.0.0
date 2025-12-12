@@ -16,7 +16,7 @@ snapshot_at_time(
 \item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}.
 Must have been created with \code{history_detail = "standard"} or \code{"full"}.}
 
-\item{target_time}{Numeric. Time point to reconstruct population state. 
+\item{target_time}{Numeric. Time point to reconstruct population state.
 Must be >= 0 and <= maximum simulation time. If larger than max time,
 automatically uses final time with a warning.}
 
@@ -25,23 +25,22 @@ automatically uses final time with a warning.}
   \item "genotype" - Color by genotype values
   \item "phenotype" - Color by phenotype values (requires history_detail = "full")
   \item "none" - Single color (red)
-}
-Default: "genotype"}
+}}
 
-\item{show_plot}{Logical. If TRUE, displays visualization of population at target_time. Default: TRUE}
+\item{show_plot}{Logical. If TRUE, displays visualization of population at target_time.}
 
-\item{point_size}{Numeric. Size of points in plot. Default: 2}
+\item{point_size}{Numeric. Size of points in plot.}
 }
 \value{
 Invisibly returns a list with components:
   \describe{
     \item{time}{Numeric. The target_time used (may differ from input if capped at max time)}
     \item{n_alive}{Integer. Number of living individuals at target_time}
-    \item{population}{Data frame with columns: id (integer), x (numeric), y (numeric), 
-      genotype (numeric), phenotype (numeric, NA if history_detail != "full"), 
+    \item{population}{Data frame with columns: id (integer), x (numeric), y (numeric),
+      genotype (numeric), phenotype (numeric, NA if history_detail != "full"),
       width (numeric, NA if history_detail != "full"), patch_id (integer)}
     \item{events_processed}{Integer. Number of events processed up to target_time}
-    \item{history_level}{Character. The history_detail level from the simulation 
+    \item{history_level}{Character. The history_detail level from the simulation
       ("minimal", "standard", or "full")}
   }
 }
@@ -52,7 +51,7 @@ temporal analysis, creating animations, and studying population dynamics
 at critical moments.
 }
 \details{
-This function requires simulations run with \code{history_detail = "standard"} or 
+This function requires simulations run with \code{history_detail = "standard"} or
 \code{"full"}. The "minimal" history level does not record spatial coordinates,
 making reconstruction impossible. The function will check and provide a clear
 error message if the result doesn't support snapshots.
@@ -120,7 +119,7 @@ snapshot_at_time(result_big, target_time = mid_time_big)
 # Create animation sequence
 times <- seq(0, max(traj_big$time), length.out = 10)
 for (t in times) {
-  snapshot_at_time(result_big, target_time = t, 
+  snapshot_at_time(result_big, target_time = t,
                   color_by = "genotype", point_size = 3)
   Sys.sleep(0.5)  # Pause between frames
 }

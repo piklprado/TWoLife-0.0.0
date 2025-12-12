@@ -19,35 +19,33 @@ plot_simulation_on_landscape(
 \arguments{
 \item{simulation_result}{A 'twolife_result' object from \code{\link{twolife_simulation}}}
 
-\item{point_size}{Numeric. Size of survivor points. Larger values make points more visible. Default: 2}
+\item{point_size}{Numeric. Size of survivor points. Larger values make points more visible.}
 
-\item{point_color}{Character. Color for points when \code{color_by="none"}. 
-Any valid R color name or hex code. Default: "red"}
+\item{point_color}{Character. Color for points when \code{color_by="none"}.
+Any valid R color name or hex code.}
 
-\item{point_shape}{Integer. Point shape following R's pch codes (e.g., 16 = filled circle, 
-1 = open circle, 17 = filled triangle). Default: 16}
+\item{point_shape}{Integer. Point shape following R's pch codes (e.g., 16 = filled circle,
+1 = open circle, 17 = filled triangle)}
 
 \item{color_by}{Character. How to color survivor points:
 \itemize{
   \item "none" - Single color specified by \code{point_color}
   \item "genotype" - Color gradient based on genotype values (heat colors)
   \item "phenotype" - Color gradient based on phenotype values (heat colors)
-}
-Default: "none"}
+}}
 
 \item{landscape_colors}{Character. Color scheme for landscape:
 \itemize{
   \item "habitat" - Green gradient for continuous, white/green for binary
   \item "terrain" - Built-in terrain.colors palette
   \item "viridis" - Viridis color scale (requires viridisLite package)
-}
-Default: "habitat"}
+}}
 
-\item{main}{Character. Plot title. If NULL, automatically generated. Default: NULL}
+\item{main}{Character. Plot title. If NULL, automatically generated.}
 
-\item{filename}{Character. Optional file path to save plot. If NULL, displays interactively. Default: NULL}
+\item{filename}{Character. Optional file path to save plot. If NULL, displays interactively.}
 
-\item{add_stats}{Logical. If TRUE, adds statistics text to plot (currently not implemented). Default: TRUE}
+\item{add_stats}{Logical. If TRUE, adds statistics text to plot (currently not implemented).}
 }
 \value{
 The input \code{simulation_result} object, invisibly. Allows for piping/chaining operations.
@@ -72,14 +70,14 @@ Color Mapping:
     \item "genotype": Heat gradient (red = low, yellow = high) shows genetic variation
     \item "phenotype": Heat gradient shows expressed trait values (includes plasticity effects)
   }
-  
+
   When coloring by genotype/phenotype, visual clustering of similar colors in similar
   habitats indicates successful habitat selection or local adaptation.
 
 Interpretation:
   \itemize{
     \item Survivors clustered in habitat (green/dark areas) = effective habitat preference
-    \item Match between point colors and background colors (when using "genotype" or "phenotype") 
+    \item Match between point colors and background colors (when using "genotype" or "phenotype")
       = phenotype-environment matching (high fitness)
     \item Scattered distribution = weak habitat selection or high dispersal
     \item Survivors in matrix (white/light areas) = tolerance to poor habitat or recent dispersal

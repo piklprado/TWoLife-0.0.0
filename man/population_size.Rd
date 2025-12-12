@@ -20,7 +20,7 @@ A data frame with two columns:
 \description{
 Computes population size at each event time from simulation results.
 Works with all history_detail levels (only requires event times and types).
-Useful for analyzing population dynamics, detecting extinctions, and 
+Useful for analyzing population dynamics, detecting extinctions, and
 identifying critical time points.
 }
 \details{
@@ -64,9 +64,9 @@ trajectory <- population_size(result)
 head(trajectory)
 
 # Plot population over time
-plot(trajectory$time, trajectory$population_size, 
-     type = "l", 
-     xlab = "Time", 
+plot(trajectory$time, trajectory$population_size,
+     type = "l",
+     xlab = "Time",
      ylab = "Population Size",
      main = "Population Dynamics")
 
