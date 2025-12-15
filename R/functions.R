@@ -21,21 +21,22 @@ NULL
 #'
 #' @param landscape_params List containing landscape parameters:
 #'   \describe{
-#'     \item{habitat}{Matrix (numeric). World Habitat Pixel Matrix. Binary (0/1) or continuous habitat values (0 to 1). Each pixel represents an environmental quality value at that location. Individuals experience fitness effects based on how well their phenotype matches the habitat value of their current location. Matrix dimensions define the landscape grid resolution. Required.}
-#'     \item{cell_size}{Numeric. Length of the side of a landscape cell in world units. Defines the spatial resolution of the landscape. If habitat is a 100x100 matrix and cell_size = 1.0, the simulated world dimensions are 100x100 world units (world_width = 100, world_height = 100). All spatial parameters (step_length, neighbor_radius, coordinates) use these same world units. Individuals have continuous (x,y) coordinates and are not restricted to cell centers.}
-#'     \item{boundary_condition}{Integer. Defines what happens to individuals attempting to move beyond world edges:
+#'     \item{habitat}{Matrix (integre, logical or numeric). World Habitat Pixel Matrix. Matriz values should be binary (0/1, T/F) or continuous habitat values (from 0 to 1). Each value represents represents an environmental quality value of a pixel. Individuals experience fitness effects based on how well their phenotype matches the habitat value of the pixel they are located.  Matrix dimensions define the landscape size and grid resolution. Required.}
+#'     \item{cell_size}{Numeric. Length of the side of a landscape cell in world units. Defines the spatial resolution of the landscape. If habitat is a 100x100 matrix and cell_size = 1.0, the simulated world dimensions are 100x100 world units (world_width = 100, world_height = 100). All spatial parameters (step_length, neighbor_radius, coordinates) use these same world units. The position of individuals have are in continuous (x,y) coordinates and are not restricted to pixel centers.}
+#'     \item{boundary_condition}{Integer. Defines what happens to individuals that reach the edges of world borders:
 #'       \itemize{
-#'         \item 1 = reflective: individuals attempting to move beyond the boundary bounce back into the landscape at the mirror position and remain in the simulation
-#'         \item 2 = absorbing: individuals moving beyond the boundary permanently exit the simulation and are removed from the population, generating emigration events (recorded as event type = 3)
+#'         \item 1 = reflective: agent keeps its speed, but its path "bounces" off the border at the same angle it hit it (angle of incidence equals angle of reflection);
+#'         \item 2 = absorbing: individuals that cross borders permanently exit the simulation and are removed from the population, generating emigration events (recorded as event type = 3)
 #'         \item 3 = periodic: individuals moving beyond one edge wrap to the opposite edge, creating torus topology (infinite landscape approximation)
 #'       }
 #'}
-#'     \item{density_type}{Integer. Determines how population density is calculated for density-dependent demographic processes:
+#'     \item{density_type}{Integer. Determines how population density is calculated for density-dependent demographic processes to be applied to each individual:
 #'       \itemize{
-#'         \item 1 = local: density calculated as number of individuals within neighbor_radius distance of the focal individual, divided by circular area. Represents spatially-explicit local competition (territoriality, local resource depletion).
+#'         \item 1 = local: density calculated as number of individuals within a neighbor_radius distance of the focal individual. Represents local, spatially-explicit local competition (territoriality, local resource depletion).
 #'         \item 2 = global: density calculated as total population size divided by total landscape area. Represents population-wide resource limitation.
 #'       }
-#'       
+#'
+# PI: Massa ter as fŕomulas. Mas acho que isso é um caso típico de informação que pode ir para a seção details . E aí aqui vc pode indicar apenas: "see details for further information" 
 #'       Mathematical formulas:
 #'       
 #'       \deqn{\rho_{local} = \frac{N_{neighbors}}{\pi r^2}}
@@ -54,6 +55,7 @@ NULL
 #'       This density value is then used in birth and mortality rate calculations via birth_density_slope and mortality_density_slope parameters.}
 #'     \item{matrix_mortality_multiplier}{Numeric. Mortality rate multiplier applied based on habitat suitability. Controls how mortality scales from optimal to unsuitable habitat. Values > 1 increase mortality in poor-quality habitat, creating "hostile matrix" effects.
 #'
+# Idem aqui para estas fórumlas matemáticas, melhor nos details
 #'       Mathematical application depends on whether individuals are perfect specialists or generalists:
 #'
 #'       For perfect specialists (\eqn{\sigma = 0}):
@@ -88,7 +90,7 @@ NULL
 #'
 #'}
 #'     \item{matrix_dispersal_multiplier}{Numeric. Dispersal rate multiplier applied based on habitat suitability. Controls the frequency of dispersal events (not the distance per event) in unsuitable habitat. Values < 1 reduce dispersal frequency in matrix, while values > 1 increase it.
-#'
+# PI: idem
 #'       Mathematical application (for perfect specialists with genotype_sds = 0):
 #'
 #'       If individual is in exactly optimal habitat:
@@ -223,8 +225,8 @@ NULL
 #'}
 #'     \item{initial_placement_mode}{Integer. Determines how individuals are positioned at simulation start:
 #'       \itemize{
-#'         \item 1 = random placement
-#'         \item 2 = random placement anywhere with bivariate normal distribution centered on landscape center, with \eqn{\sigma_{placement} = L \sqrt{d_0}}
+#'         \item 1 = uniform random placement 
+#'         \item 2 = random placement following bivariate normal distribution centered on landscape center, with \eqn{\sigma_{placement} = L \sqrt{d_0}}
 #'         \item 3 = custom coordinates (requires initial_x_coordinates and initial_y_coordinates)
 #'       }
 #'       
@@ -233,9 +235,10 @@ NULL
 #'     \item{initial_x_coordinates}{Numeric vector. Custom x-coordinates for initial individual positions. Required if initial_placement_mode = 3. Length must equal initial_population_size.}
 #'     \item{initial_y_coordinates}{Numeric vector. Custom y-coordinates for initial individual positions. Required if initial_placement_mode = 3. Length must equal initial_population_size.}
 #'   }
-#' @param genetic_params List containing genetic parameters (each can be single value or vector matching initial_population_size):
+#' @param genetic_params List containing genetic parameters (each can be single value or a vector of values for each individual, thus matching initial_population_size):
+# PI: muito legal a possibilidade de incluir um vertor com valores para cada indivíduo. Como o R recicla vetores, vc permite isso neste caso ou colocaou uma mensagem de erro caso o verto não tenha o mesmo comprimento do n de indivíduos?
 #'   \describe{
-#'     \item{genotype_means}{Numeric. The underlying genetic optimum value(s) for each individual. Represents the habitat value at which fitness is maximized. Should be on the same scale as habitat values.
+#'     \item{genotype_means}{Numeric. The genetic environmental optimum value(s) for each individual. Represents the habitat value at which fitness is maximized, for each genotype. Should be on the same scale as habitat values.
 #'
 #'       Mathematical application:
 #'
@@ -258,7 +261,7 @@ NULL
 #'       }
 #'
 #'}
-#'     \item{genotype_sds}{Numeric. Standard deviation parameter of the Gaussian fitness function. Determines tolerance to habitat mismatch (niche width).
+#'     \item{genotype_sds}{Numeric. Standard deviation parameter of the Gaussian fitness as a function of environmental values. Determines tolerance to habitat mismatch (niche width).
 #'
 #'       Fitness function:
 #'
@@ -311,8 +314,8 @@ NULL
 #'       The phenotype is then used in fitness calculations and habitat selection, while genotype is passed to offspring.
 #'
 #'}
-#'     \item{sampling_points}{Integer. Number of candidate locations sampled within step_length distance during each dispersal event when performing habitat selection.
-#'
+#'     \item{sampling_points}{Integer. Number of candidate locations sampled within step_length distance during each dispersal event when individuals perform habitat selection. Individuals perfom a vision_angle-constrained random walk when sampling_points = 0, and habitat selection otherwise. See details.
+# PI: aqui tb sugiro mudar isso para a seção details.
 #'       Mathematical application:
 #'
 #'       When sampling_points = 0:
@@ -330,7 +333,7 @@ NULL
 #'       }
 #'
 #'       Only relevant when plasticities > 0 or when habitat selection is desired.}
-#'     \item{habitat_selection_temperatures}{Numeric. Temperature parameter for the softmax function used in habitat selection. Controls the strength of preference for high-quality habitat during dispersal. Must be positive.
+#'     \item{habitat_selection_temperatures}{Positive real. Temperature parameter for the softmax function used in habitat selection. Controls the strength of preference for high-quality habitat during dispersal.
 #'
 #'       Mathematical application:
 #'
@@ -346,7 +349,7 @@ NULL
 #'         \item \eqn{n} = sampling_points (number of candidate locations)
 #'       }
 #'
-#'       Effect of temperature values:
+#'       Effect of temperature values: 
 #'       \itemize{
 #'         \item \eqn{T \to 0}: Strong selection, nearly deterministic choice of best habitat
 #'         \item \eqn{T = 1}: Balanced selection, probability proportional to relative fitness
@@ -360,7 +363,7 @@ NULL
 #'     \item{max_events}{Integer. Maximum number of events to simulate before stopping.
 #'
 #'       An "event" is any demographic or movement action: birth, death, dispersal, or emigration. The simulation uses a Gillespie algorithm where time advances stochastically between events.
-#'
+# PI: tb sugiro mudar esta parte para detalhes
 #'       Time advancement between events:
 #'
 #'       Delta t ~ Exponential(rate = sum(all individual rates))
@@ -371,23 +374,26 @@ NULL
 #'
 #'}
 #'     \item{neutral_mode}{Logical. If TRUE, disables habitat selection and genetic variation to create a neutral null model.
+# PI: aqui fiquei com uma dúvida conceitual: a seleção ainda opera mas não há variação genética nem fenotípica entre indivíduos? Podemos chamra isso de modelo neutro? ou nulo? (são conceitos diferentes, aliás). Acho que fica mais claro se vc deixar mais explícito o que é mantido no modelo (movimento, seleção, etc) ao invés de caracterizar como neutro ou nulo. 
 #'
 #'       Effects when neutral_mode = TRUE:
 #'       \itemize{
 #'         \item All individuals assigned the mean genotype of the initial population
-#'         \item Habitat selection disabled (all locations equally preferred)
+#'         \item Habitat selection disabled
 #'         \item Useful for null model comparisons to isolate effects of habitat selection and evolution
 #'       }
 #'
 #'}
 #'   }
-#' @param history_detail Character. Level of detail recorded in event history. Higher detail levels enable more analyses but use more memory.
+#' @param history_detail Character. Level of detail recorded in event history outputed by the function. Higher detail levels enable more analyses but use more memory.
 #'
 #'   Options:
 #'   \itemize{
 #'     \item "minimal": Records only time, event type, and individual ID. Fastest, smallest memory footprint. Sufficient for population size trajectories.
 #'     \item "standard": Adds spatial coordinates (x, y), patch ID, and genotype for each event. Enables spatial and genetic analyses. Recommended for most uses.
+# PI: patch ID é diferente de pixel ID? Se sim, acho que precisa definir. Se não mudaria para pixel ID
 #'     \item "full": Adds phenotype and niche width (genotype_sds) for each event. Enables complete historical reconstruction. Use when analyzing plasticity or detailed evolutionary dynamics.
+# PI: Seria niche fenótipo de sd de cada indivíduo a acada momento do tempo?
 #'   }
 #'
 #' @param master_seed Integer. Random seed for reproducible simulations. If NULL, results are stochastic.
